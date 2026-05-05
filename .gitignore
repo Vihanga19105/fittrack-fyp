@@ -1,0 +1,22 @@
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Backend
+backend/target/
+backend/.idea/
+
+# ML
+ml/__pycache__/
+ml/venv/
+ml/.env
+
+# Docker
+*.log
+
+# Environment files
+backend/.env
+*.env
+
+# Local config
+backend/src/main/resources/application.properties
