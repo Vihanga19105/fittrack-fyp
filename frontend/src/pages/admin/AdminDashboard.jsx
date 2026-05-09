@@ -179,7 +179,7 @@ export default function AdminDashboard() {
                 Pending Trainer Approvals
                 {stats.pendingTrainers > 0 && (
                   <span className="px-2 py-0.5 rounded-full text-xs text-white font-bold"
-                    style={{ background: "#f59e0b" }}>
+                    style={{ background: "#f59e0b",borderColor: "rgba(10,35,66,0.45)",}}>
                     {stats.pendingTrainers}
                   </span>
                 )}

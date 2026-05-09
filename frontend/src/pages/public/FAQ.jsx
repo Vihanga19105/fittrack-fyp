@@ -23,7 +23,7 @@ export default function FAQ() {
     { q: "Can I rate my trainer?",
       a: "Yes! After your subscription is active or expired, you can rate your trainer with 1-5 stars and write a review. Reviews are shown publicly on the trainers page." },
     { q: "What happens when my subscription expires?",
-      a: "You'll see an EXPIRED status on your payments page. You can renew with the same trainer or choose a new one. Your workout and meal plans remain visible." },
+      a: "You'll see an EXPIRED status on your payments page. You can renew with the same trainer or choose a new one. Your workout and meal plans updated by your trainer." },
     { q: "Do trainers need to be verified?",
       a: "Yes. All trainers must submit valid certifications that are reviewed and approved by our admin team before they can accept clients." },
     { q: "How do I cancel my subscription?",

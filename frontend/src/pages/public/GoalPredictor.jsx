@@ -7,7 +7,7 @@ const BLUE      = "#29ABE2";
 const BLUE_DARK = "#1A8FBF";
 const BLUE_LIGHT= "#E8F7FD";
 const NAVY      = "#0A2342";
-const ML_API    = "http://localhost:5001";
+const ML_API    = "http://localhost:5000";
 
 const GOAL_TYPES = [
   { value: "Weight Loss",     icon: "🔥", color: "#ef4444", bg: "#fef2f2", desc: "Burn fat, get lean"    },

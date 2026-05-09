@@ -16,7 +16,25 @@ export default function AdminManageTrainers() {
   const [selectedTrainer, setSelectedTrainer] = useState(null);
   const [expandedId,      setExpandedId]      = useState(null);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [trainersRes, pendingRes] = await Promise.all([
+          api.get("/api/admin/trainers").catch(async () => {
+            const res = await api.get("/api/admin/users");
+            return { data: res.data.filter(u => u.role === "TRAINER") };
+          }),
+          api.get("/api/admin/pending-trainers"),
+        ]);
+        setTrainers(trainersRes.data);
+        setPendingTrainers(pendingRes.data);
+      } catch (e) {
+        console.error(e);
+      }
+      setLoading(false);
+    };
+    fetchData();
+  }, []);
 
   const loadData = async () => {
     try {
@@ -29,7 +47,9 @@ export default function AdminManageTrainers() {
       ]);
       setTrainers(trainersRes.data);
       setPendingTrainers(pendingRes.data);
-    } catch {}
+    } catch (e) {
+      console.error(e);
+    }
     setLoading(false);
   };
 
@@ -47,7 +67,10 @@ export default function AdminManageTrainers() {
           Swal.fire({ title: "Approved! ✅", text: `${name} is now a verified trainer!`, icon: "success", timer: 2000, showConfirmButton: false });
           setSelectedTrainer(null);
           loadData();
-        } catch { Swal.fire("Error", "Failed to approve trainer", "error"); }
+        } catch (e) {
+          console.error(e);
+          Swal.fire("Error", "Failed to approve trainer", "error");
+        }
       }
     });
   };
@@ -88,7 +111,10 @@ export default function AdminManageTrainers() {
           Swal.fire({ title: "Rejected & Notified", html: `<b>${name}</b> has been notified with your reason.`, icon: "info", timer: 2500, showConfirmButton: false });
           setSelectedTrainer(null);
           loadData();
-        } catch { Swal.fire("Error", "Failed to reject trainer", "error"); }
+        } catch (e) {
+          console.error(e);
+          Swal.fire("Error", "Failed to reject trainer", "error");
+        }
       }
     });
   };
@@ -107,7 +133,10 @@ export default function AdminManageTrainers() {
           Swal.fire({ title: "Revoked!", icon: "success", timer: 1500, showConfirmButton: false });
           setSelectedTrainer(null);
           loadData();
-        } catch { Swal.fire("Error", "Failed to revoke trainer", "error"); }
+        } catch (e) {
+          console.error(e);
+          Swal.fire("Error", "Failed to revoke trainer", "error");
+        }
       }
     });
   };
@@ -120,7 +149,9 @@ export default function AdminManageTrainers() {
 
   const filteredTrainers = trainers.filter(t => {
     const q = search.toLowerCase();
-    const matchSearch = t.name?.toLowerCase().includes(q) || t.email?.toLowerCase().includes(q) || t.specialization?.toLowerCase().includes(q);
+    const matchSearch = t.name?.toLowerCase().includes(q) ||
+      t.email?.toLowerCase().includes(q) ||
+      t.specialization?.toLowerCase().includes(q);
     const matchTab =
       activeTab === "ALL" ||
       (activeTab === "VERIFIED" && (t.approved || t.isVerified)) ||
@@ -130,11 +161,13 @@ export default function AdminManageTrainers() {
 
   const filteredPending = pendingTrainers.filter(t => {
     const q = search.toLowerCase();
-    return t.name?.toLowerCase().includes(q) || t.email?.toLowerCase().includes(q);
+    return t.name?.toLowerCase().includes(q) ||
+      t.email?.toLowerCase().includes(q);
   });
 
   const getProfilePct = (t) => {
-    const fields = [t.bio, t.specialization, t.certification, t.experienceYears, t.pricePerMonth, t.profileImage, t.phone];
+    const fields = [t.bio, t.specialization, t.certification,
+      t.experienceYears, t.pricePerMonth, t.profileImage, t.phone];
     return Math.round((fields.filter(Boolean).length / fields.length) * 100);
   };
 
@@ -151,7 +184,7 @@ export default function AdminManageTrainers() {
   return (
     <div className="min-h-screen pb-10" style={{ background: "#faf5ff" }}>
 
-      {/* ── HERO ── */}
+      {/* HERO */}
       <div className="relative text-white px-8 py-12 overflow-hidden"
         style={{
           backgroundImage: `linear-gradient(135deg, rgba(10,35,66,0.92) 0%, rgba(10,35,66,0.65) 50%, rgba(124,58,237,0.80) 100%), url('https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=1400&q=80')`,
@@ -189,11 +222,12 @@ export default function AdminManageTrainers() {
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="flex border-b border-gray-100">
             {[
-              { id: "ALL",      label: "All Trainers"       },
-              { id: "VERIFIED", label: "✅ Verified"        },
-              { id: "PENDING",  label: "⏳ Pending Approval" },
+              { id: "ALL",      label: "All Trainers"        },
+              { id: "VERIFIED", label: "✅ Verified"         },
+              { id: "PENDING",  label: "⏳ Pending Approval"  },
             ].map(tab => (
-              <button key={tab.id} onClick={() => { setActiveTab(tab.id); setSelectedTrainer(null); setSearch(""); }}
+              <button key={tab.id}
+                onClick={() => { setActiveTab(tab.id); setSelectedTrainer(null); setSearch(""); }}
                 className="flex-1 py-3 text-sm font-semibold transition-all flex items-center justify-center gap-2"
                 style={{
                   borderBottom: activeTab === tab.id ? `2px solid ${VIOLET}` : "2px solid transparent",
@@ -216,7 +250,8 @@ export default function AdminManageTrainers() {
           <div className="p-4 border-b border-gray-50">
             <div className="relative">
               <Search className="absolute left-3 top-3.5 text-gray-400" size={16} />
-              <input type="text" placeholder={activeTab === "PENDING" ? "Search pending trainers..." : "Search by name, email, specialization..."}
+              <input type="text"
+                placeholder={activeTab === "PENDING" ? "Search pending trainers..." : "Search by name, email, specialization..."}
                 value={search} onChange={e => setSearch(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-800 text-sm focus:outline-none transition-all"
                 onFocus={e => e.target.style.borderColor = VIOLET}
@@ -224,7 +259,7 @@ export default function AdminManageTrainers() {
             </div>
           </div>
 
-          {/* ── ALL / VERIFIED TAB — list + detail panel ── */}
+          {/* ALL / VERIFIED TAB */}
           {activeTab !== "PENDING" && (
             <div className="flex">
               {/* LIST */}
@@ -238,7 +273,8 @@ export default function AdminManageTrainers() {
                   const isVerified = trainer.approved || trainer.isVerified;
                   const isSelected = selectedTrainer?.userId === trainer.userId;
                   return (
-                    <div key={trainer.userId} onClick={() => setSelectedTrainer(isSelected ? null : trainer)}
+                    <div key={trainer.userId}
+                      onClick={() => setSelectedTrainer(isSelected ? null : trainer)}
                       className="flex items-center gap-4 px-5 py-4 cursor-pointer transition-all"
                       style={{ background: isSelected ? VIOLET_LIGHT : "transparent" }}>
                       <div className="w-10 h-10 rounded-full text-white font-bold text-sm flex items-center justify-center flex-shrink-0"
@@ -302,7 +338,9 @@ export default function AdminManageTrainers() {
                           <span className="flex-shrink-0">{icon}</span>
                           <div>
                             <p className="text-xs text-gray-400">{label}</p>
-                            <p className="text-xs font-semibold text-gray-700">{value || <span className="text-gray-300">Not set</span>}</p>
+                            <p className="text-xs font-semibold text-gray-700">
+                              {value || <span className="text-gray-300">Not set</span>}
+                            </p>
                           </div>
                         </div>
                       ))}
@@ -310,13 +348,15 @@ export default function AdminManageTrainers() {
 
                     <div className="space-y-2">
                       {(selectedTrainer.approved || selectedTrainer.isVerified) ? (
-                        <button onClick={() => revokeTrainer(selectedTrainer.userId, selectedTrainer.name)}
+                        <button
+                          onClick={() => revokeTrainer(selectedTrainer.userId, selectedTrainer.name)}
                           className="w-full py-2.5 rounded-xl text-white font-bold text-sm hover:opacity-90 transition-all"
                           style={{ background: "#ef4444" }}>
                           ❌ Revoke Verification
                         </button>
                       ) : (
-                        <button onClick={() => approveTrainer(selectedTrainer.userId, selectedTrainer.name)}
+                        <button
+                          onClick={() => approveTrainer(selectedTrainer.userId, selectedTrainer.name)}
                           className="w-full py-2.5 rounded-xl text-white font-bold text-sm hover:opacity-90 transition-all"
                           style={{ background: "#10b981" }}>
                           ✅ Approve Trainer
@@ -341,7 +381,7 @@ export default function AdminManageTrainers() {
             </div>
           )}
 
-          {/* ── PENDING TAB — full verification cards ── */}
+          {/* PENDING TAB */}
           {activeTab === "PENDING" && (
             <div className="p-5">
               {filteredPending.length === 0 ? (
@@ -356,7 +396,6 @@ export default function AdminManageTrainers() {
                     const pct = getProfilePct(trainer);
                     return (
                       <div key={trainer.userId} className="border-2 border-gray-100 rounded-2xl overflow-hidden">
-                        {/* top bar */}
                         <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${VIOLET_DARK}, ${VIOLET})` }} />
 
                         <div className="p-6">
@@ -382,11 +421,12 @@ export default function AdminManageTrainers() {
                             <div className="flex-1">
                               <div className="flex items-center gap-2 flex-wrap mb-1">
                                 <h3 className="text-lg font-bold text-gray-800">{trainer.name}</h3>
-                                <span className="px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-700 font-semibold">⏳ Pending Review</span>
+                                <span className="px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-700 font-semibold">
+                                  ⏳ Pending Review
+                                </span>
                               </div>
                               <p className="text-sm text-gray-500">{trainer.email}</p>
 
-                              {/* Details grid */}
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
                                 {[
                                   { label: "Specialization", value: trainer.specialization },
@@ -403,7 +443,6 @@ export default function AdminManageTrainers() {
                                 ))}
                               </div>
 
-                              {/* Bio */}
                               {trainer.bio ? (
                                 <div className="mt-3 p-3 rounded-xl text-sm text-gray-600 italic" style={{ background: VIOLET_LIGHT }}>
                                   "{trainer.bio}"
@@ -414,7 +453,6 @@ export default function AdminManageTrainers() {
                                 </div>
                               )}
 
-                              {/* Profile completeness */}
                               <div className="mt-4">
                                 <div className="flex justify-between items-center mb-1">
                                   <p className="text-xs text-gray-400">Profile completeness</p>
@@ -426,20 +464,22 @@ export default function AdminManageTrainers() {
                                 </div>
                               </div>
 
-                              {/* Expand */}
-                              <button onClick={() => setExpandedId(expandedId === trainer.userId ? null : trainer.userId)}
-                                className="mt-3 text-sm font-medium hover:underline" style={{ color: VIOLET }}>
+                              <button
+                                onClick={() => setExpandedId(expandedId === trainer.userId ? null : trainer.userId)}
+                                className="mt-3 text-sm font-medium hover:underline"
+                                style={{ color: VIOLET }}>
                                 {expandedId === trainer.userId ? "▲ Hide details" : "▼ View more details"}
                               </button>
                             </div>
                           </div>
 
-                          {/* Expanded */}
                           {expandedId === trainer.userId && (
                             <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
                               <div>
                                 <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Phone</p>
-                                <p className="text-sm font-medium text-gray-700">{trainer.phone || <span className="text-gray-400">Not provided</span>}</p>
+                                <p className="text-sm font-medium text-gray-700">
+                                  {trainer.phone || <span className="text-gray-400">Not provided</span>}
+                                </p>
                               </div>
                               <div>
                                 <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Applied on</p>
@@ -451,7 +491,6 @@ export default function AdminManageTrainers() {
                           )}
                         </div>
 
-                        {/* Action buttons */}
                         <div className="px-6 py-4 border-t border-gray-100 flex gap-3 justify-end" style={{ background: "#fafafa" }}>
                           <button onClick={() => rejectTrainer(trainer.userId, trainer.name)}
                             className="px-6 py-2.5 rounded-xl text-white font-semibold text-sm hover:opacity-90 active:scale-95 transition-all"

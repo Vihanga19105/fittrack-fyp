@@ -49,6 +49,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/payment/**").permitAll()
                         .requestMatchers("/api/workout-completion/**").permitAll()
                         .requestMatchers("/api/availability/**").permitAll()
+                        .requestMatchers("/api/contact/**").permitAll()
 
                         // ── AUTHENTICATED ──
                         .requestMatchers("/api/progress-photos/**").authenticated()

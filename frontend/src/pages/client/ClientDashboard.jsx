@@ -668,7 +668,7 @@ export default function ClientDashboard() {
                 <div className="text-center">
                   <p className="text-4xl mb-2">🏋️</p>
                   <p className="font-semibold text-gray-700 text-sm">No trainer yet</p>
-                  <button onClick={() => navigate("/client/trainers")}
+                  <button onClick={() => navigate("/trainers")}
                     className="mt-3 w-full py-2.5 rounded-xl text-white text-sm font-semibold"
                     style={{ background: BLUE }}>
                     Find a Trainer
