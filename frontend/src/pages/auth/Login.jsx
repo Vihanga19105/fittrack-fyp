@@ -86,7 +86,6 @@ export default function Login() {
       } else if (role === "ADMIN") {
         navigate("/admin/dashboard");
       }
-
     } catch (error) {
       let msg = "Invalid email or password. Please try again.";
 
@@ -100,9 +99,6 @@ export default function Login() {
         }
       }
 
-      setForm({ email: "", password: "" });
-      setLoading(false);
-
       await Swal.fire({
         title: "Login Failed",
         text: msg,
@@ -111,7 +107,6 @@ export default function Login() {
         allowOutsideClick: false,
         allowEscapeKey: false,
       });
-
     } finally {
       setLoading(false);
     }
@@ -129,6 +124,7 @@ export default function Login() {
           <h2 className="text-4xl text-gray-800 font-bold mb-2 text-center">
             Login
           </h2>
+
           <p className="text-center text-gray-500 text-sm mb-6">
             Welcome back to FitTrack
           </p>
@@ -137,6 +133,7 @@ export default function Login() {
           <label className="text-sm font-medium text-gray-700 mb-1 block">
             Email
           </label>
+
           <input
             type="email"
             name="email"
@@ -150,6 +147,7 @@ export default function Login() {
           <label className="text-sm font-medium text-gray-700 mb-1 block">
             Password
           </label>
+
           <div className="relative mb-2">
             <input
               type={showPassword ? "text" : "password"}
@@ -159,6 +157,7 @@ export default function Login() {
               onChange={handleChange}
               className="w-full p-3 rounded-lg border border-gray-300 outline-none text-gray-800 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 pr-10"
             />
+
             <span
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-3 cursor-pointer text-gray-400 hover:text-gray-600 text-lg"
