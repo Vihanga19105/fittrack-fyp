@@ -162,7 +162,7 @@ export default function ClientChat() {
         <div className="text-8xl">💬</div>
         <h2 className="text-2xl font-bold text-gray-600">No Active Trainer</h2>
         <p className="text-gray-400 text-sm text-center max-w-sm">You need an active subscription to chat with your trainer!</p>
-        <button onClick={() => window.location.href = "/client/trainers"}
+        <button onClick={() => window.location.href = "/trainers"}
           className="px-6 py-3 rounded-xl text-white font-semibold"
           style={{ background: BLUE }}>
           Find a Trainer

@@ -13,6 +13,11 @@ const BLUE = "#29ABE2";
 const BLUE_DARK = "#1A8FBF";
 const BLUE_LIGHT = "#E8F7FD";
 
+// Check if client profile is complete enough to send requests
+const isProfileComplete = (p) => {
+  return p && p.name && p.goalType && p.weightKg && p.heightCm && p.age;
+};
+
 export default function ClientDashboard() {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -24,8 +29,10 @@ export default function ClientDashboard() {
     heightCm: "--", age: "--",
     goalWeight: null,
   });
+  const [profileComplete, setProfileComplete] = useState(true);
   const [subscription, setSubscription] = useState(null);
   const [acceptedSubs, setAcceptedSubs] = useState([]);
+  const [rejectedSubs, setRejectedSubs] = useState([]);
   const [allSubs, setAllSubs] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [todayMeals, setTodayMeals] = useState([]);
@@ -53,8 +60,7 @@ export default function ClientDashboard() {
 
   useEffect(() => {
     const handleClick = (e) => {
-      if (!e.target.closest("#notif-panel") &&
-          !e.target.closest("#notif-btn")) {
+      if (!e.target.closest("#notif-panel") && !e.target.closest("#notif-btn")) {
         setShowNotifications(false);
       }
     };
@@ -66,6 +72,12 @@ export default function ClientDashboard() {
     const notifs = [];
     const stored = JSON.parse(localStorage.getItem("readNotifs") || "[]");
     const hasActive = subs.some(s => s.status === "ACTIVE");
+
+    // ✅ Only show rejected notifications for trainers who have NOT
+    // subsequently accepted a new request from this client
+    const acceptedTrainerIds = new Set(
+      subs.filter(s => s.status === "ACCEPTED" || s.status === "ACTIVE").map(s => s.trainerId)
+    );
 
     subs.filter(s => s.status === "ACCEPTED").forEach(s => {
       notifs.push({
@@ -97,20 +109,23 @@ export default function ClientDashboard() {
       });
     });
 
+    // ✅ Only show rejection if that trainer has NOT since accepted
     subs.filter(s => s.status === "REJECTED").forEach(s => {
-      notifs.push({
-        id: `rejected-${s.id}`,
-        type: "error",
-        icon: "❌",
-        title: "Request Rejected",
-        message: s.rejectionReason
-          ? `${s.trainerName} rejected: "${s.rejectionReason}"`
-          : `${s.trainerName} rejected your request.`,
-        action: "/client/trainers",
-        actionLabel: "Find Trainer",
-        time: s.updatedAt,
-        color: "#ef4444",
-      });
+      if (!acceptedTrainerIds.has(s.trainerId)) {
+        notifs.push({
+          id: `rejected-${s.id}`,
+          type: "error",
+          icon: "❌",
+          title: "Request Rejected",
+          message: s.rejectionReason
+            ? `${s.trainerName} rejected: "${s.rejectionReason}"`
+            : `${s.trainerName} rejected your request.`,
+          action: "/trainers",
+          actionLabel: "Find Trainer",
+          time: s.updatedAt,
+          color: "#ef4444",
+        });
+      }
     });
 
     if (expiryDaysVal !== null) {
@@ -212,25 +227,46 @@ export default function ClientDashboard() {
     try {
       const profileRes = await api.get("/api/profile/client");
       profileData = profileRes.data;
+      const p = profileRes.data;
       setProfile({
-        name: profileRes.data.name || localStorage.getItem("name") || "User",
-        weightKg: profileRes.data.weightKg || "--",
-        goalType: profileRes.data.goalType || "--",
-        heightCm: profileRes.data.heightCm || "--",
-        age: profileRes.data.age || "--",
-        goalWeight: profileRes.data.goalWeight || null,
+        name:      p.name      || localStorage.getItem("name") || "User",
+        weightKg:  p.weightKg  || "--",
+        goalType:  p.goalType  || "--",
+        heightCm:  p.heightCm  || "--",
+        age:       p.age       || "--",
+        goalWeight:p.goalWeight || null,
       });
+      // ✅ Check if profile is complete
+      setProfileComplete(isProfileComplete(p));
     } catch {}
 
     try {
       const subRes = await api.get("/api/subscriptions/my");
       subsData = subRes.data || [];
       setAllSubs(subsData);
+
       const accepted = subsData.filter(s => s.status === "ACCEPTED");
-      setAcceptedSubs(accepted);
       const firstActive = subsData.find(s => s.status === "ACTIVE");
       activeSubData = firstActive;
-      setSubscription(firstActive || accepted[0] || (subsData.length > 0 ? subsData[subsData.length - 1] : null));
+
+      // ✅ Rejected: only show if that trainer has NOT since accepted/activated
+      const acceptedTrainerIds = new Set(
+        subsData.filter(s => s.status === "ACCEPTED" || s.status === "ACTIVE").map(s => s.trainerId)
+      );
+      const rejected = subsData.filter(
+        s => s.status === "REJECTED" && !acceptedTrainerIds.has(s.trainerId)
+      );
+
+      setAcceptedSubs(accepted);
+      setRejectedSubs(rejected);
+
+      // ✅ Subscription card: ACTIVE → ACCEPTED → PENDING only (never REJECTED)
+      const cardSub = firstActive
+        || accepted[0]
+        || subsData.find(s => s.status === "PENDING")
+        || null;
+      setSubscription(cardSub);
+
       if (firstActive?.endDate) {
         const end = new Date(firstActive.endDate);
         const now = new Date();
@@ -244,13 +280,13 @@ export default function ClientDashboard() {
     } catch {}
 
     try {
-      const chatRes = await axios.get(`${API}/chat/unread-count`, { headers: { Authorization: `Bearer ${token}` }});
+      const chatRes = await axios.get(`${API}/chat/unread-count`, { headers: { Authorization: `Bearer ${token}` } });
       unread = chatRes.data.unreadCount || 0;
       setUnreadCount(unread);
     } catch {}
 
     try {
-      const mealRes = await axios.get(`${API}/meal-plans/my-plan/${clientId}`, { headers: { Authorization: `Bearer ${token}` }});
+      const mealRes = await axios.get(`${API}/meal-plans/my-plan/${clientId}`, { headers: { Authorization: `Bearer ${token}` } });
       if (!mealRes.data.message) {
         const items = mealRes.data.items || [];
         setTodayMeals(items.filter(i => i.dayOfWeek === todayNum));
@@ -259,20 +295,20 @@ export default function ClientDashboard() {
     } catch {}
 
     try {
-      const workoutRes = await axios.get(`${API}/workout/my`, { headers: { Authorization: `Bearer ${token}` }});
+      const workoutRes = await axios.get(`${API}/workout/my`, { headers: { Authorization: `Bearer ${token}` } });
       const allEx = workoutRes.data.flatMap(p => p.exercises || []);
       setTodayExercises(allEx.filter(e => e.dayOfWeek === todayNum));
     } catch {}
 
     try {
-      const bmiRes = await axios.get(`${API}/bmi/history`, { headers: { Authorization: `Bearer ${token}` }});
+      const bmiRes = await axios.get(`${API}/bmi/history`, { headers: { Authorization: `Bearer ${token}` } });
       bLogs = bmiRes.data || [];
       setBmiLogs(bLogs);
       if (bLogs.length > 0) setLatestBmi(bLogs[0]);
     } catch {}
 
     try {
-      const wRes = await axios.get(`${API}/weight/history`, { headers: { Authorization: `Bearer ${token}` }});
+      const wRes = await axios.get(`${API}/weight/history`, { headers: { Authorization: `Bearer ${token}` } });
       wLogs = wRes.data || [];
       setWeightLogs(wLogs);
     } catch {}
@@ -306,25 +342,26 @@ export default function ClientDashboard() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "ACTIVE": return "#10b981";
-      case "PENDING": return "#f59e0b";
+      case "ACTIVE":   return "#10b981";
+      case "PENDING":  return "#f59e0b";
       case "ACCEPTED": return BLUE;
-      case "EXPIRED": return "#ef4444";
-      default: return "#9ca3af";
+      case "EXPIRED":  return "#ef4444";
+      default:         return "#9ca3af";
     }
   };
 
   const DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
-  const getTimeAgo = (dateStr) => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    const diff = Math.floor((new Date() - date) / (1000 * 60));
-    if (diff < 1) return "Just now";
-    if (diff < 60) return `${diff}m ago`;
-    if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
-    return `${Math.floor(diff / 1440)}d ago`;
-  };
+  // Profile completeness %
+  const profileFields = [
+    profile.name && profile.name !== "User",
+    profile.weightKg && profile.weightKg !== "--",
+    profile.heightCm && profile.heightCm !== "--",
+    profile.age && profile.age !== "--",
+    profile.goalType && profile.goalType !== "--",
+  ];
+  const profilePct = Math.round((profileFields.filter(Boolean).length / profileFields.length) * 100);
+  const missingFields = ["Name", "Weight", "Height", "Age", "Fitness Goal"].filter((_, i) => !profileFields[i]);
 
   if (loading) {
     return (
@@ -340,78 +377,130 @@ export default function ClientDashboard() {
   return (
     <div className="min-h-screen" style={{ background: "#f0f9ff" }}>
 
-      {/* ── HERO ── */}
-      <div
-        className="relative text-white px-8 py-12 overflow-hidden"
+      {/* HERO */}
+      <div className="relative text-white px-8 py-12 overflow-hidden"
         style={{
           backgroundImage: `linear-gradient(135deg, rgba(10,35,66,0.92) 0%, rgba(10,35,66,0.70) 50%, rgba(41,171,226,0.80) 100%), url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1400&q=80')`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          minHeight: "200px",
+          backgroundSize: "cover", backgroundPosition: "center", minHeight: "200px",
         }}>
-
-        {/* decorative circles */}
         <div className="absolute right-10 -top-6 w-56 h-56 bg-white/10 rounded-full pointer-events-none" />
         <div className="absolute right-40 top-16 w-32 h-32 bg-white/10 rounded-full pointer-events-none" />
-
         <div className="relative z-10 max-w-6xl mx-auto">
           <div className="flex items-start justify-between gap-6 flex-wrap">
-
-            {/* LEFT — greeting */}
             <div>
-              <p className="text-blue-200 text-xs font-semibold uppercase tracking-widest mb-1">
-                Welcome back
-              </p>
-              <h1 className="text-4xl font-black tracking-tight">
-                {profile.name} 👋
-              </h1>
+              <p className="text-blue-200 text-xs font-semibold uppercase tracking-widest mb-1">Welcome back</p>
+              <h1 className="text-4xl font-black tracking-tight">{profile.name} 👋</h1>
               <p className="text-blue-100 mt-1 text-sm">
-                {new Date().toLocaleDateString("en-US", {
-                  weekday: "long", month: "long", day: "numeric"
-                })}
+                {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
               </p>
               {earnedBadgesCount > 0 && (
                 <div className="mt-3 flex items-center gap-2 flex-wrap">
-                  <span className="text-xs text-blue-200">
-                    🏆 {earnedBadgesCount} badge{earnedBadgesCount !== 1 ? "s" : ""} earned:
-                  </span>
+                  <span className="text-xs text-blue-200">🏆 {earnedBadgesCount} badge{earnedBadgesCount !== 1 ? "s" : ""} earned:</span>
                   {badges.filter(b => b.earned).slice(0, 3).map(b => (
                     <span key={b.id} className="text-sm" title={b.label}>{b.icon}</span>
                   ))}
-                  {earnedBadgesCount > 3 && (
-                    <span className="text-xs text-blue-200">+{earnedBadgesCount - 3} more</span>
-                  )}
+                  {earnedBadgesCount > 3 && <span className="text-xs text-blue-200">+{earnedBadgesCount - 3} more</span>}
                 </div>
               )}
             </div>
-
-            {/* RIGHT — stat pills (desktop only) */}
             <div className="hidden md:flex flex-col gap-2 items-end">
               <div className="flex gap-2">
-                <div className="bg-white/15 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center border border-white/20">
-                  <p className="text-xs text-blue-200 mb-0.5">Weight</p>
-                  <p className="font-bold text-white text-lg leading-none">{profile.weightKg} <span className="text-xs font-normal">kg</span></p>
-                </div>
-                <div className="bg-white/15 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center border border-white/20">
-                  <p className="text-xs text-blue-200 mb-0.5">Height</p>
-                  <p className="font-bold text-white text-lg leading-none">{profile.heightCm} <span className="text-xs font-normal">cm</span></p>
-                </div>
-                <div className="bg-white/15 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center border border-white/20">
-                  <p className="text-xs text-blue-200 mb-0.5">BMI</p>
-                  <p className="font-bold text-white text-lg leading-none">{latestBmi ? latestBmi.bmiValue : "--"}</p>
-                </div>
-                <div className="bg-white/15 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center border border-white/20">
-                  <p className="text-xs text-blue-200 mb-0.5">Goal</p>
-                  <p className="font-bold text-white text-sm leading-none">{profile.goalType}</p>
-                </div>
+                {[
+                  { label: "Weight", value: profile.weightKg, unit: "kg"  },
+                  { label: "Height", value: profile.heightCm, unit: "cm"  },
+                  { label: "BMI",    value: latestBmi ? latestBmi.bmiValue : "--" },
+                  { label: "Goal",   value: profile.goalType, small: true },
+                ].map(({ label, value, unit, small }) => (
+                  <div key={label} className="bg-white/15 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center border border-white/20">
+                    <p className="text-xs text-blue-200 mb-0.5">{label}</p>
+                    <p className={`font-bold text-white leading-none ${small ? "text-sm" : "text-lg"}`}>
+                      {value} {unit && <span className="text-xs font-normal">{unit}</span>}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
       </div>
-      {/* ── END HERO ── */}
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+
+        {/* ✅ INCOMPLETE PROFILE BANNER */}
+        {!profileComplete && (
+          <div className="rounded-2xl shadow-sm border-l-4 p-5"
+            style={{ background: "#fefce8", borderColor: "#f59e0b" }}>
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl flex-shrink-0">📋</span>
+                <div>
+                  <p className="font-bold text-gray-800">Complete your profile to find a trainer</p>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    You need to fill in your details before you can send trainer requests.
+                  </p>
+                  {missingFields.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {missingFields.map(f => (
+                        <span key={f} className="text-xs px-2 py-1 rounded-full font-medium"
+                          style={{ background: "#fef3c7", color: "#92400e" }}>
+                          ⚠ {f} missing
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-3 flex items-center gap-3">
+                    <div className="flex-1 h-2 bg-amber-100 rounded-full overflow-hidden max-w-xs">
+                      <div className="h-full rounded-full transition-all"
+                        style={{ width: `${profilePct}%`, background: profilePct === 100 ? "#10b981" : "#f59e0b" }} />
+                    </div>
+                    <span className="text-xs font-bold" style={{ color: "#f59e0b" }}>{profilePct}% complete</span>
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => navigate("/client/profile")}
+                className="px-5 py-2.5 rounded-xl text-white text-sm font-semibold flex-shrink-0 hover:opacity-90 transition-all"
+                style={{ background: "#f59e0b" }}>
+                Complete Profile →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ✅ REJECTED BANNERS — only for trainers who haven't since accepted */}
+        {rejectedSubs.map((sub) => (
+          <div key={sub.id}
+            className="rounded-2xl shadow-sm border-l-4 p-5"
+            style={{ background: "#fef2f2", borderColor: "#ef4444" }}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl flex-shrink-0">❌</span>
+                <div>
+                  <p className="font-bold text-gray-800">{sub.trainerName} rejected your request</p>
+                  {sub.rejectionReason && (
+                    <p className="text-sm text-red-600 mt-1 font-medium">Reason: "{sub.rejectionReason}"</p>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1">
+                    Fix your profile and send a new request to this trainer or find another one.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                {!profileComplete && (
+                  <button onClick={() => navigate("/client/profile")}
+                    className="px-3 py-2 rounded-xl text-white text-xs font-semibold"
+                    style={{ background: "#f59e0b" }}>
+                    Fix Profile
+                  </button>
+                )}
+                <button onClick={() => navigate("/trainers")}
+                  className="px-3 py-2 rounded-xl text-white text-xs font-semibold"
+                  style={{ background: "#ef4444" }}>
+                  Browse Trainers 🔍
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
 
         {/* EXPIRY BANNER */}
         {expiryDays !== null && expirySubscription && (
@@ -434,10 +523,8 @@ export default function ClientDashboard() {
                   Swal.fire({
                     title: "Renew Subscription?",
                     html: `<p style="color:#6b7280;font-size:14px;">A new request will be sent to <strong>${expirySubscription.trainerName}</strong>.</p>`,
-                    icon: "question",
-                    showCancelButton: true,
-                    confirmButtonColor: BLUE,
-                    cancelButtonColor: "#6b7280",
+                    icon: "question", showCancelButton: true,
+                    confirmButtonColor: BLUE, cancelButtonColor: "#6b7280",
                     confirmButtonText: "Yes, Send Request",
                   }).then(async (result) => {
                     if (result.isConfirmed) {
@@ -455,8 +542,7 @@ export default function ClientDashboard() {
                 style={{ background: expiryDays === 0 ? "#ef4444" : "#f59e0b" }}>
                 🔄 Renew with {expirySubscription.trainerName}
               </button>
-              <button
-                onClick={() => navigate("/client/trainers")}
+              <button onClick={() => navigate("/trainers")}
                 className="flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold border-2 bg-white hover:opacity-80 transition-all"
                 style={{ borderColor: expiryDays === 0 ? "#ef4444" : "#f59e0b", color: expiryDays === 0 ? "#ef4444" : "#92400e" }}>
                 🔍 Find a New Trainer
@@ -465,7 +551,7 @@ export default function ClientDashboard() {
           </div>
         )}
 
-        {/* ACCEPTED BANNERS */}
+        {/* ✅ ACCEPTED BANNERS — Pay Now */}
         {!hasActiveSub && acceptedSubs.map((sub) => (
           <div key={sub.id}
             className="rounded-2xl shadow-sm border-l-4 p-5 flex items-start justify-between gap-4"
@@ -514,12 +600,11 @@ export default function ClientDashboard() {
         {/* TODAY PROGRESS STRIP */}
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: "Calories Today", value: todayCalories > 0 ? `${todayCalories} kcal` : "0 kcal", sub: targetCalories > 0 ? `of ${targetCalories} kcal` : "No meal plan yet", icon: "🔥", color: "#ef4444", path: "/client/nutrition" },
-            { label: "Exercises Today", value: `${todayCompleted}/${todayExercises.length}`, sub: todayExercises.length === 0 ? "Rest day" : "completed", icon: "💪", color: "#10b981", path: "/client/workout-plan" },
-            { label: "Workouts This Week", value: weeklyWorkouts, sub: "exercises done", icon: "📊", color: "#8b5cf6", path: "/client/progress" },
+            { label: "Calories Today",     value: todayCalories > 0 ? `${todayCalories} kcal` : "0 kcal", sub: targetCalories > 0 ? `of ${targetCalories} kcal` : "No meal plan yet", icon: "🔥", color: "#ef4444", path: "/client/nutrition"    },
+            { label: "Exercises Today",    value: `${todayCompleted}/${todayExercises.length}`,            sub: todayExercises.length === 0 ? "Rest day" : "completed",                  icon: "💪", color: "#10b981", path: "/client/workout-plan" },
+            { label: "Workouts This Week", value: weeklyWorkouts,                                          sub: "exercises done",                                                         icon: "📊", color: "#8b5cf6", path: "/client/progress"      },
           ].map(({ label, value, sub, icon, color, path }) => (
-            <div key={label}
-              onClick={() => navigate(path)}
+            <div key={label} onClick={() => navigate(path)}
               className="bg-white rounded-2xl shadow-sm p-4 cursor-pointer hover:shadow-md transition-all">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg" style={{ background: `${color}20` }}>{icon}</div>
@@ -537,7 +622,6 @@ export default function ClientDashboard() {
           {/* LEFT 2 COLS */}
           <div className="lg:col-span-2 space-y-6">
 
-            {/* ACHIEVEMENTS */}
             {earnedBadgesCount > 0 && (
               <div className="bg-white rounded-2xl shadow-sm p-5">
                 <div className="flex justify-between items-center mb-3">
@@ -550,8 +634,7 @@ export default function ClientDashboard() {
                 </div>
                 <AchievementBadges badges={badges} showAll={false} />
                 <button onClick={() => navigate("/client/progress")}
-                  className="mt-3 text-xs font-semibold hover:underline"
-                  style={{ color: BLUE }}>
+                  className="mt-3 text-xs font-semibold hover:underline" style={{ color: BLUE }}>
                   View all achievements →
                 </button>
               </div>
@@ -565,8 +648,7 @@ export default function ClientDashboard() {
                   <p className="text-xs text-gray-400">{DAYS[todayNum - 1]} · {todayCalories} / {targetCalories} kcal</p>
                 </div>
                 <button onClick={() => navigate("/client/nutrition")}
-                  className="text-xs px-3 py-1.5 rounded-lg text-white font-medium"
-                  style={{ background: BLUE }}>
+                  className="text-xs px-3 py-1.5 rounded-lg text-white font-medium" style={{ background: BLUE }}>
                   View Plan
                 </button>
               </div>
@@ -582,9 +664,7 @@ export default function ClientDashboard() {
                     if (items.length === 0) return null;
                     const kcal = items.reduce((s, i) => s + i.calories, 0);
                     return (
-                      <div key={mt}
-                        className="flex justify-between items-center px-4 py-3 rounded-xl"
-                        style={{ background: "#f8fafc" }}>
+                      <div key={mt} className="flex justify-between items-center px-4 py-3 rounded-xl" style={{ background: "#f8fafc" }}>
                         <div className="flex items-center gap-2">
                           <span className="text-lg">{mt === "Breakfast" ? "🌅" : mt === "Lunch" ? "☀️" : mt === "Snack" ? "🍎" : "🌙"}</span>
                           <div>
@@ -608,21 +688,18 @@ export default function ClientDashboard() {
                   <p className="text-xs text-gray-400">{DAYS[todayNum - 1]} · {todayCompleted}/{todayExercises.length} done</p>
                 </div>
                 <button onClick={() => navigate("/client/workout-plan")}
-                  className="text-xs px-3 py-1.5 rounded-lg text-white font-medium"
-                  style={{ background: BLUE }}>
+                  className="text-xs px-3 py-1.5 rounded-lg text-white font-medium" style={{ background: BLUE }}>
                   View Workout
                 </button>
               </div>
-
               {todayExercises.length > 0 && (
                 <div className="mb-4">
                   <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div className="h-full rounded-full transition-all"
-                      style={{ width: `${todayExercises.length > 0 ? (todayCompleted / todayExercises.length) * 100 : 0}%`, background: BLUE }} />
+                      style={{ width: `${(todayCompleted / todayExercises.length) * 100}%`, background: BLUE }} />
                   </div>
                 </div>
               )}
-
               {todayExercises.length === 0 ? (
                 <div className="text-center py-8 rounded-xl" style={{ background: BLUE_LIGHT }}>
                   <p className="text-3xl mb-2">😴</p>
@@ -633,8 +710,7 @@ export default function ClientDashboard() {
                   {todayExercises.slice(0, 4).map((ex, i) => {
                     const isDone = todayCompletions.includes(ex.id);
                     return (
-                      <div key={i}
-                        className="flex justify-between items-center px-4 py-3 rounded-xl transition-all"
+                      <div key={i} className="flex justify-between items-center px-4 py-3 rounded-xl transition-all"
                         style={{ background: isDone ? BLUE_LIGHT : "#f8fafc", border: isDone ? `1px solid ${BLUE}40` : "1px solid transparent" }}>
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-lg text-white text-xs font-bold flex items-center justify-center"
@@ -668,27 +744,35 @@ export default function ClientDashboard() {
                 <div className="text-center">
                   <p className="text-4xl mb-2">🏋️</p>
                   <p className="font-semibold text-gray-700 text-sm">No trainer yet</p>
-                  <button onClick={() => navigate("/trainers")}
-                    className="mt-3 w-full py-2.5 rounded-xl text-white text-sm font-semibold"
-                    style={{ background: BLUE }}>
-                    Find a Trainer
-                  </button>
+                  <p className="text-xs text-gray-400 mt-1 mb-3">
+                    {!profileComplete ? "Complete your profile first" : "Find a trainer to get started"}
+                  </p>
+                  {!profileComplete ? (
+                    <button onClick={() => navigate("/client/profile")}
+                      className="w-full py-2.5 rounded-xl text-white text-sm font-semibold"
+                      style={{ background: "#f59e0b" }}>
+                      Complete Profile →
+                    </button>
+                  ) : (
+                    <button onClick={() => navigate("/trainers")}
+                      className="w-full py-2.5 rounded-xl text-white text-sm font-semibold"
+                      style={{ background: BLUE }}>
+                      Browse Trainers 🔍
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="text-center">
                   {subscription.trainerProfileImage ? (
-  <img
-    src={subscription.trainerProfileImage}
-    alt={subscription.trainerName}
-    className="w-16 h-16 rounded-full object-cover mx-auto mb-3 border-2"
-    style={{ borderColor: BLUE }}
-  />
-) : (
-  <div className="w-16 h-16 rounded-full text-white font-bold text-2xl flex items-center justify-center mx-auto mb-3"
-    style={{ background: BLUE }}>
-    {subscription.trainerName?.charAt(0)}
-  </div>
-)}
+                    <img src={subscription.trainerProfileImage} alt={subscription.trainerName}
+                      className="w-16 h-16 rounded-full object-cover mx-auto mb-3 border-2"
+                      style={{ borderColor: BLUE }} />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full text-white font-bold text-2xl flex items-center justify-center mx-auto mb-3"
+                      style={{ background: BLUE }}>
+                      {subscription.trainerName?.charAt(0)}
+                    </div>
+                  )}
                   <p className="font-bold text-gray-800">{subscription.trainerName}</p>
                   <span className="inline-block mt-1 px-3 py-1 rounded-full text-xs font-bold text-white"
                     style={{ background: getStatusColor(subscription.status) }}>
@@ -704,11 +788,34 @@ export default function ClientDashboard() {
                       )}
                     </>
                   )}
-                  <button onClick={() => navigate("/client/payments")}
-                    className="mt-3 w-full py-2.5 rounded-xl text-white text-sm font-semibold"
-                    style={{ background: BLUE }}>
-                    {subscription.status === "ACCEPTED" ? "Pay Now 💳" : subscription.status === "EXPIRED" ? "Renew Plan" : "View Payments"}
-                  </button>
+                  {subscription.status === "ACCEPTED" && (
+                    <button onClick={() => navigate("/client/payments")}
+                      className="mt-3 w-full py-2.5 rounded-xl text-white text-sm font-semibold"
+                      style={{ background: BLUE }}>
+                      Pay Now 💳
+                    </button>
+                  )}
+                  {subscription.status === "ACTIVE" && (
+                    <button onClick={() => navigate("/client/payments")}
+                      className="mt-3 w-full py-2.5 rounded-xl text-white text-sm font-semibold"
+                      style={{ background: BLUE }}>
+                      View Payments
+                    </button>
+                  )}
+                  {subscription.status === "PENDING" && (
+                    <button onClick={() => navigate("/client/payments")}
+                      className="mt-3 w-full py-2.5 rounded-xl text-white text-sm font-semibold"
+                      style={{ background: "#f59e0b" }}>
+                      ⏳ Awaiting Approval
+                    </button>
+                  )}
+                  {subscription.status === "EXPIRED" && (
+                    <button onClick={() => navigate("/client/payments")}
+                      className="mt-3 w-full py-2.5 rounded-xl text-white text-sm font-semibold"
+                      style={{ background: "#ef4444" }}>
+                      Renew Plan
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -742,7 +849,7 @@ export default function ClientDashboard() {
                   <span className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-bold ${
                     latestBmi.category === "Normal Weight" ? "bg-green-100 text-green-700"
                     : latestBmi.category === "Underweight" ? "bg-blue-100 text-blue-700"
-                    : latestBmi.category === "Overweight" ? "bg-yellow-100 text-yellow-700"
+                    : latestBmi.category === "Overweight"  ? "bg-yellow-100 text-yellow-700"
                     : "bg-red-100 text-red-700"
                   }`}>
                     {latestBmi.category}
@@ -761,14 +868,14 @@ export default function ClientDashboard() {
               <h3 className="text-sm font-semibold text-gray-500 mb-3">Quick Actions</h3>
               <div className="space-y-2">
                 {[
-                  { label: "📊 View Progress", path: "/client/progress" },
-                  { label: "⚖️ Log Weight", path: "/client/progress" },
-                  { label: "🎯 Goal Predictor", path: "/goal-predictor" },
-                  { label: "👤 Edit Profile", path: "/client/profile" },
-                  { label: "💳 Payments", path: "/client/payments" },
+                  { label: "📊 View Progress",    path: "/client/progress" },
+                  { label: "⚖️ Log Weight",       path: "/client/progress" },
+                  { label: "🎯 Goal Predictor",   path: "/goal-predictor"  },
+                  { label: "👤 Edit Profile",     path: "/client/profile"  },
+                  { label: "💳 Payments",         path: "/client/payments" },
+                  { label: "🔍 Browse Trainers",  path: "/trainers"        },
                 ].map(({ label, path }) => (
-                  <button key={label}
-                    onClick={() => navigate(path)}
+                  <button key={label} onClick={() => navigate(path)}
                     className="w-full py-2.5 rounded-xl text-sm font-medium text-left px-4 transition hover:opacity-90"
                     style={{ background: BLUE_LIGHT, color: BLUE_DARK }}>
                     {label}

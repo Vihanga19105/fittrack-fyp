@@ -33,7 +33,6 @@ const SORT_OPTIONS = [
 
 const AVAILABILITY_DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
-// Goal → Specialization mapping
 const GOAL_TO_SPEC = {
   "Weight Loss":      ["Weight Loss", "Cardio", "General Fitness", "Nutrition"],
   "Muscle Gain":      ["Muscle Gain", "Strength Training", "Athletic Training"],
@@ -58,29 +57,32 @@ const renderStars = (rating, size = 14) => {
 
 export default function PublicTrainers() {
   const navigate = useNavigate();
-  const [trainers,       setTrainers]       = useState([]);
-  const [reviews,        setReviews]        = useState({});
-  const [availability,   setAvailability]   = useState({});
-  const [loading,        setLoading]        = useState(true);
-  const [subscribedIds,  setSubscribedIds]  = useState([]);
-  const [hasActiveSub,   setHasActiveSub]   = useState(false);
-  const [activeTrainerId,setActiveTrainerId]= useState(null);
-  const [selectedTrainer,setSelectedTrainer]= useState(null);
+  const [trainers,        setTrainers]        = useState([]);
+  const [reviews,         setReviews]         = useState({});
+  const [availability,    setAvailability]    = useState({});
+  const [loading,         setLoading]         = useState(true);
 
-  // client profile for recommendations
-  const [clientProfile,  setClientProfile]  = useState(null);
-  const [profileLoading, setProfileLoading] = useState(false);
+  // ✅ subscribedIds = only PENDING or ACCEPTED (not REJECTED)
+  const [subscribedIds,   setSubscribedIds]   = useState([]);
+  // ✅ rejectedIds = trainers who rejected this client
+  const [rejectedIds,     setRejectedIds]     = useState([]);
 
-  const [search,         setSearch]         = useState("");
-  const [specFilter,     setSpecFilter]     = useState("All");
-  const [priceFilter,    setPriceFilter]    = useState(0);
-  const [sortBy,         setSortBy]         = useState("rating");
-  const [availDayFilter, setAvailDayFilter] = useState("");
-  const [minExpFilter,   setMinExpFilter]   = useState(0);
-  const [showFilters,    setShowFilters]    = useState(true);
+  const [hasActiveSub,    setHasActiveSub]    = useState(false);
+  const [activeTrainerId, setActiveTrainerId] = useState(null);
+  const [selectedTrainer, setSelectedTrainer] = useState(null);
+  const [clientProfile,   setClientProfile]   = useState(null);
+  const [profileLoading,  setProfileLoading]  = useState(false);
 
-  const token    = localStorage.getItem("token");
-  const role     = localStorage.getItem("role");
+  const [search,          setSearch]          = useState("");
+  const [specFilter,      setSpecFilter]      = useState("All");
+  const [priceFilter,     setPriceFilter]     = useState(0);
+  const [sortBy,          setSortBy]          = useState("rating");
+  const [availDayFilter,  setAvailDayFilter]  = useState("");
+  const [minExpFilter,    setMinExpFilter]    = useState(0);
+  const [showFilters,     setShowFilters]     = useState(true);
+
+  const token      = localStorage.getItem("token");
+  const role       = localStorage.getItem("role");
   const isLoggedIn = !!token;
   const isClient   = role === "CLIENT";
 
@@ -111,18 +113,29 @@ export default function PublicTrainers() {
       try {
         const res = await api.get("/api/subscriptions/my");
         const subs = res.data || [];
-        setSubscribedIds(subs.map(s => s.trainerId));
+
+        // ✅ Only mark as "subscribed" if PENDING or ACCEPTED — not REJECTED
+        const activePendingIds = subs
+          .filter(s => s.status === "PENDING" || s.status === "ACCEPTED")
+          .map(s => s.trainerId);
+
+        // ✅ Track rejected trainer IDs so client CAN re-request
+        const rejectedTrainerIds = subs
+          .filter(s => s.status === "REJECTED")
+          .map(s => s.trainerId);
+
+        setSubscribedIds(activePendingIds);
+        setRejectedIds(rejectedTrainerIds);
+
         const activeSub = subs.find(s => s.status === "ACTIVE");
         setHasActiveSub(!!activeSub);
         setActiveTrainerId(activeSub?.trainerId || null);
       } catch {}
 
-      // Load client profile for recommendations
       setProfileLoading(true);
       try {
         const profileRes = await api.get("/api/profile/client");
         const p = profileRes.data;
-        // Profile is considered "complete" if goalType + at least name + age or weight set
         const isComplete = p.goalType && p.name && (p.age || p.weightKg);
         setClientProfile(isComplete ? p : null);
       } catch {}
@@ -130,13 +143,11 @@ export default function PublicTrainers() {
     }
   };
 
-  // ── RECOMMENDED TRAINERS ──
   const recommendedTrainers = useMemo(() => {
     if (!isLoggedIn || !isClient || !clientProfile) return [];
-    const goalType    = clientProfile.goalType;
-    const matchSpecs  = GOAL_TO_SPEC[goalType] || [];
+    const goalType   = clientProfile.goalType;
+    const matchSpecs = GOAL_TO_SPEC[goalType] || [];
     if (!matchSpecs.length) return [];
-
     return trainers
       .filter(t => matchSpecs.some(spec =>
         t.specialization?.toLowerCase().includes(spec.toLowerCase())
@@ -144,7 +155,7 @@ export default function PublicTrainers() {
       .sort((a, b) =>
         (reviews[b.userId]?.averageRating || 0) - (reviews[a.userId]?.averageRating || 0)
       )
-      .slice(0, 4); // show top 4 recommended
+      .slice(0, 4);
   }, [trainers, clientProfile, reviews, isLoggedIn, isClient]);
 
   const filteredTrainers = useMemo(() => {
@@ -183,44 +194,100 @@ export default function PublicTrainers() {
   const handleSubscribeClick = async (e, trainer) => {
     e.stopPropagation();
     if (!isLoggedIn) {
-      Swal.fire({ title: "Join FitTrack!", text: `Register to subscribe to ${trainer.name}!`, icon: "info", showCancelButton: true, confirmButtonColor: BLUE, cancelButtonColor: "#6b7280", confirmButtonText: "Register Now", cancelButtonText: "Login instead" })
-        .then(r => { if (r.isConfirmed) navigate("/register"); else if (r.dismiss === Swal.DismissReason.cancel) navigate("/login"); });
+      Swal.fire({
+        title: "Join FitTrack!",
+        text: `Register to subscribe to ${trainer.name}!`,
+        icon: "info", showCancelButton: true,
+        confirmButtonColor: BLUE, cancelButtonColor: "#6b7280",
+        confirmButtonText: "Register Now", cancelButtonText: "Login instead",
+      }).then(r => {
+        if (r.isConfirmed) navigate("/register");
+        else if (r.dismiss === Swal.DismissReason.cancel) navigate("/login");
+      });
       return;
     }
-    if (!isClient) { Swal.fire("Not allowed", "Only clients can subscribe!", "warning"); return; }
+    if (!isClient)    { Swal.fire("Not allowed", "Only clients can subscribe!", "warning"); return; }
     if (hasActiveSub) { Swal.fire("Active Subscription", "You already have an active subscription.", "info"); return; }
-    if (subscribedIds.includes(trainer.userId)) { Swal.fire("Already requested!", "You already have a pending/active request with this trainer!", "info"); return; }
+    if (subscribedIds.includes(trainer.userId)) {
+      Swal.fire("Already requested!", "You already have a pending/accepted request with this trainer!", "info");
+      return;
+    }
     try {
       await api.post(`/api/subscriptions/request/${trainer.userId}`);
       Swal.fire({ title: "Request Sent! 🎉", text: `Request sent to ${trainer.name}!`, icon: "success", timer: 2000, showConfirmButton: false });
       setSubscribedIds(prev => [...prev, trainer.userId]);
-    } catch (err) { Swal.fire("Error", String(err?.response?.data || "Failed"), "error"); }
+      // ✅ Remove from rejectedIds if they re-request
+      setRejectedIds(prev => prev.filter(id => id !== trainer.userId));
+    } catch (err) {
+      Swal.fire("Error", String(err?.response?.data || "Failed"), "error");
+    }
   };
 
   const getTrainerButton = (t) => {
     const isTheirActiveTrainer = isLoggedIn && isClient && t.userId === activeTrainerId;
+    // ✅ hasPendingRequest only true for PENDING/ACCEPTED — not REJECTED
     const hasPendingRequest    = isLoggedIn && isClient && subscribedIds.includes(t.userId) && !isTheirActiveTrainer;
     const isBlocked            = isLoggedIn && isClient && hasActiveSub && t.userId !== activeTrainerId;
+    // ✅ wasRejected — show re-request button with note
+    const wasRejected          = isLoggedIn && isClient && rejectedIds.includes(t.userId);
 
     if (isTheirActiveTrainer)
-      return <button disabled onClick={e => e.stopPropagation()} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white" style={{ background: "#10b981" }}>✓ Your Active Trainer</button>;
+      return (
+        <button disabled onClick={e => e.stopPropagation()}
+          className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white"
+          style={{ background: "#10b981" }}>
+          ✓ Your Active Trainer
+        </button>
+      );
+
     if (hasPendingRequest)
-      return <button disabled onClick={e => e.stopPropagation()} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white opacity-70" style={{ background: BLUE }}>✓ Request Sent</button>;
+      return (
+        <button disabled onClick={e => e.stopPropagation()}
+          className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white opacity-70"
+          style={{ background: BLUE }}>
+          ✓ Request Sent
+        </button>
+      );
+
     if (isBlocked)
-      return <button disabled onClick={e => e.stopPropagation()} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-400" style={{ background: "#f3f4f6" }}>🔒 Unavailable</button>;
+      return (
+        <button disabled onClick={e => e.stopPropagation()}
+          className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-400"
+          style={{ background: "#f3f4f6" }}>
+          🔒 Unavailable
+        </button>
+      );
+
     if (isLoggedIn && !isClient)
-      return <button disabled className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-400" style={{ background: "#f3f4f6" }}>View Only</button>;
+      return (
+        <button disabled
+          className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-400"
+          style={{ background: "#f3f4f6" }}>
+          View Only
+        </button>
+      );
+
+    // ✅ Was rejected — allow re-request with a different label
+    if (wasRejected)
+      return (
+        <button onClick={e => handleSubscribeClick(e, t)}
+          className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-all"
+          style={{ background: "#f59e0b" }}>
+          🔄 Request Again
+        </button>
+      );
+
     return (
       <button onClick={e => handleSubscribeClick(e, t)}
-        className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-all" style={{ background: BLUE }}>
+        className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-all"
+        style={{ background: BLUE }}>
         Subscribe
       </button>
     );
   };
 
-  // Reusable trainer card
   const TrainerCard = ({ t, highlighted = false }) => {
-    const rev   = reviews[t.userId]     || { averageRating: 0, totalReviews: 0, reviews: [] };
+    const rev   = reviews[t.userId]      || { averageRating: 0, totalReviews: 0, reviews: [] };
     const avail = availability[t.userId] || [];
     const isActiveTrainer = isLoggedIn && isClient && t.userId === activeTrainerId;
 
@@ -320,7 +387,7 @@ export default function PublicTrainers() {
   return (
     <div className="text-gray-800">
 
-      {/* ── HERO ── */}
+      {/* HERO */}
       <div className="relative text-white px-6 pt-32 pb-16"
         style={{ background: `linear-gradient(135deg, ${BLUE_DARK} 0%, ${BLUE} 100%)` }}>
         <div className="max-w-4xl mx-auto text-center relative z-10">
@@ -342,12 +409,11 @@ export default function PublicTrainers() {
       <div className="min-h-screen pb-10" style={{ background: "#f0f9ff" }}>
         <div className="max-w-7xl mx-auto px-4 py-8">
 
-          {/* ── RECOMMENDED FOR YOU ── */}
+          {/* RECOMMENDED */}
           {isLoggedIn && isClient && !profileLoading && (
             <>
               {clientProfile && recommendedTrainers.length > 0 && (
                 <div className="mb-10">
-                  {/* Section header */}
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
@@ -364,15 +430,9 @@ export default function PublicTrainers() {
                       {recommendedTrainers.length} match{recommendedTrainers.length !== 1 ? "es" : ""}
                     </span>
                   </div>
-
-                  {/* Recommended cards */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {recommendedTrainers.map(t => (
-                      <TrainerCard key={t.userId} t={t} highlighted={true} />
-                    ))}
+                    {recommendedTrainers.map(t => <TrainerCard key={t.userId} t={t} highlighted={true} />)}
                   </div>
-
-                  {/* Divider */}
                   <div className="flex items-center gap-4 mt-8 mb-6">
                     <div className="flex-1 h-px bg-gray-200" />
                     <span className="text-sm font-semibold text-gray-400 flex-shrink-0">All Trainers</span>
@@ -381,7 +441,6 @@ export default function PublicTrainers() {
                 </div>
               )}
 
-              {/* Client logged in but profile incomplete */}
               {!clientProfile && !hasActiveSub && (
                 <div className="mb-6 rounded-2xl p-5 border-2 flex items-center justify-between gap-4 flex-wrap"
                   style={{ background: BLUE_LIGHT, borderColor: `${BLUE}40` }}>
@@ -402,7 +461,7 @@ export default function PublicTrainers() {
             </>
           )}
 
-          {/* SEARCH + SORT BAR */}
+          {/* SEARCH + SORT */}
           <div className="flex flex-col sm:flex-row gap-3 mb-5">
             <div className="relative flex-1">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
@@ -480,7 +539,7 @@ export default function PublicTrainers() {
             </div>
           )}
 
-          {/* ALL TRAINER CARDS */}
+          {/* TRAINER CARDS */}
           {filteredTrainers.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-2xl">
               <p className="text-5xl mb-3">🔍</p>
@@ -514,7 +573,10 @@ export default function PublicTrainers() {
               {reviews[selectedTrainer.userId]?.reviews?.map((r, i) => (
                 <div key={i} className="border border-gray-100 rounded-xl p-4">
                   <div className="flex justify-between items-start mb-1">
-                    <div><p className="font-semibold text-gray-800 text-sm">{r.clientName}</p><div className="flex items-center gap-1 mt-0.5">{renderStars(r.rating, 12)}</div></div>
+                    <div>
+                      <p className="font-semibold text-gray-800 text-sm">{r.clientName}</p>
+                      <div className="flex items-center gap-1 mt-0.5">{renderStars(r.rating, 12)}</div>
+                    </div>
                     <span className="text-xs text-gray-400">{new Date(r.createdAt).toLocaleDateString()}</span>
                   </div>
                   {r.review && <p className="text-sm text-gray-600 mt-2">{r.review}</p>}
