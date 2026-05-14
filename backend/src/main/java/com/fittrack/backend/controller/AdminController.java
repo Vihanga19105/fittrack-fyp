@@ -3,6 +3,7 @@ package com.fittrack.backend.controller;
 import com.fittrack.backend.model.Role;
 import com.fittrack.backend.model.TrainerProfile;
 import com.fittrack.backend.model.User;
+import com.fittrack.backend.repository.ClientProfileRepository;
 import com.fittrack.backend.repository.SubscriptionRepository;
 import com.fittrack.backend.repository.TrainerProfileRepository;
 import com.fittrack.backend.repository.UserRepository;
@@ -22,16 +23,19 @@ public class AdminController {
 
     private final UserRepository userRepository;
     private final TrainerProfileRepository trainerProfileRepository;
+    private final ClientProfileRepository clientProfileRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final EmailService emailService;
 
     public AdminController(
             UserRepository userRepository,
             TrainerProfileRepository trainerProfileRepository,
+            ClientProfileRepository clientProfileRepository,
             SubscriptionRepository subscriptionRepository,
             EmailService emailService) {
         this.userRepository = userRepository;
         this.trainerProfileRepository = trainerProfileRepository;
+        this.clientProfileRepository = clientProfileRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.emailService = emailService;
     }
@@ -42,13 +46,25 @@ public class AdminController {
         List<Map<String, Object>> users = userRepository
                 .findAll().stream().map(u -> {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("userId",   u.getId());
-                    map.put("name",     u.getName());
-                    map.put("email",    u.getEmail());
-                    map.put("role",     u.getRole());
-                    map.put("approved", u.isApproved());
+                    map.put("userId",    u.getId());
+                    map.put("name",      u.getName());
+                    map.put("email",     u.getEmail());
+                    map.put("role",      u.getRole());
+                    map.put("approved",  u.isApproved());
                     map.put("createdAt", u.getCreatedAt() != null
                             ? u.getCreatedAt().toString() : null);
+
+                    // ✅ Include profile image based on role
+                    if (u.getRole() == Role.TRAINER) {
+                        trainerProfileRepository.findByUser(u).ifPresent(tp ->
+                            map.put("profileImage", tp.getProfileImage())
+                        );
+                    } else if (u.getRole() == Role.CLIENT) {
+                        clientProfileRepository.findByUser(u).ifPresent(cp ->
+                            map.put("profileImage", cp.getProfileImage())
+                        );
+                    }
+
                     return map;
                 }).collect(Collectors.toList());
         return ResponseEntity.ok(users);
@@ -62,10 +78,10 @@ public class AdminController {
                 .filter(u -> u.getRole() == Role.TRAINER)
                 .map(u -> {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("userId",   u.getId());
-                    map.put("name",     u.getName());
-                    map.put("email",    u.getEmail());
-                    map.put("approved", u.isApproved());
+                    map.put("userId",    u.getId());
+                    map.put("name",      u.getName());
+                    map.put("email",     u.getEmail());
+                    map.put("approved",  u.isApproved());
                     map.put("createdAt", u.getCreatedAt() != null
                             ? u.getCreatedAt().toString() : null);
                     trainerProfileRepository.findByUser(u).ifPresent(tp -> {
@@ -105,10 +121,10 @@ public class AdminController {
 
         List<Map<String, Object>> result = pendingTrainers.stream().map(u -> {
             Map<String, Object> map = new HashMap<>();
-            map.put("userId",   u.getId());
-            map.put("name",     u.getName());
-            map.put("email",    u.getEmail());
-            map.put("approved", u.isApproved());
+            map.put("userId",    u.getId());
+            map.put("name",      u.getName());
+            map.put("email",     u.getEmail());
+            map.put("approved",  u.isApproved());
             map.put("createdAt", u.getCreatedAt() != null
                     ? u.getCreatedAt().toString() : null);
             trainerProfileRepository.findByUser(u).ifPresent(tp -> {
@@ -128,8 +144,7 @@ public class AdminController {
 
     // ── APPROVE TRAINER ──
     @PutMapping("/approve-trainer/{userId}")
-    public ResponseEntity<?> approveTrainer(
-            @PathVariable Long userId) {
+    public ResponseEntity<?> approveTrainer(@PathVariable Long userId) {
         return userRepository.findById(userId).map(user -> {
             user.setApproved(true);
             userRepository.save(user);
@@ -199,20 +214,26 @@ public class AdminController {
                     map.put("endDate",   s.getEndDate() != null
                             ? s.getEndDate().toString() : null);
 
+                    // ✅ Client info + photo
                     if (s.getClient() != null) {
                         map.put("clientId",    s.getClient().getId());
                         map.put("clientName",  s.getClient().getName());
                         map.put("clientEmail", s.getClient().getEmail());
+                        clientProfileRepository.findByUser(s.getClient()).ifPresent(cp ->
+                            map.put("clientProfileImage", cp.getProfileImage())
+                        );
                     }
+
+                    // ✅ Trainer info + photo
                     if (s.getTrainer() != null) {
                         map.put("trainerId",   s.getTrainer().getId());
                         map.put("trainerName", s.getTrainer().getName());
-                        trainerProfileRepository
-                                .findByUser(s.getTrainer())
-                                .ifPresent(tp -> map.put(
-                                        "trainerPrice",
-                                        tp.getPricePerMonth()));
+                        trainerProfileRepository.findByUser(s.getTrainer()).ifPresent(tp -> {
+                            map.put("trainerPrice",        tp.getPricePerMonth());
+                            map.put("trainerProfileImage", tp.getProfileImage());
+                        });
                     }
+
                     return map;
                 }).collect(Collectors.toList());
 

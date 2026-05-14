@@ -107,7 +107,7 @@ export default function AdminPlatformAnalytics() {
   return (
     <div className="min-h-screen pb-10" style={{ background: "#faf5ff" }}>
 
-      {/* ── HERO ── */}
+      {/* HERO */}
       <div className="relative text-white px-8 py-12 overflow-hidden"
         style={{
           backgroundImage: `linear-gradient(135deg, rgba(10,35,66,0.92) 0%, rgba(10,35,66,0.65) 50%, rgba(124,58,237,0.80) 100%), url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1400&q=80')`,
@@ -124,7 +124,6 @@ export default function AdminPlatformAnalytics() {
             </p>
             <p className="text-purple-200 text-sm mt-1">Real-time insights about FitTrack</p>
           </div>
-          {/* Stat pills — only place stats shown */}
           <div className="hidden md:flex gap-2 flex-wrap">
             {[
               { label: "Total Users",   value: totalUsers       },
@@ -143,7 +142,7 @@ export default function AdminPlatformAnalytics() {
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
 
-        {/* ROW 1 — Monthly + Growth */}
+        {/* ROW 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <h3 className="font-bold text-gray-800 mb-1">Monthly Registrations</h3>
@@ -156,8 +155,8 @@ export default function AdminPlatformAnalytics() {
                   <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} />
                   <Tooltip contentStyle={{ borderRadius: "12px", border: "none" }} />
                   <Legend />
-                  <Bar dataKey="clients"  fill={VIOLET}   radius={[4,4,0,0]} name="Clients"  />
-                  <Bar dataKey="trainers" fill="#10b981"  radius={[4,4,0,0]} name="Trainers" />
+                  <Bar dataKey="clients"  fill={VIOLET}  radius={[4,4,0,0]} name="Clients"  />
+                  <Bar dataKey="trainers" fill="#10b981" radius={[4,4,0,0]} name="Trainers" />
                 </BarChart>
               </ResponsiveContainer>
             ) : <Empty />}
@@ -186,7 +185,7 @@ export default function AdminPlatformAnalytics() {
           </div>
         </div>
 
-        {/* ROW 2 — Pie + Specializations */}
+        {/* ROW 2 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <h3 className="font-bold text-gray-800 mb-1">User Distribution</h3>
@@ -221,7 +220,7 @@ export default function AdminPlatformAnalytics() {
           </div>
         </div>
 
-        {/* ROW 3 — Price Range + Verified Trainers Table */}
+        {/* ROW 3 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <h3 className="font-bold text-gray-800 mb-1">Trainer Price Ranges</h3>
@@ -239,6 +238,7 @@ export default function AdminPlatformAnalytics() {
             ) : <Empty />}
           </div>
 
+          {/* ✅ Verified Trainers with photos */}
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <h3 className="font-bold text-gray-800 mb-1">Verified Trainers</h3>
             <p className="text-xs text-gray-400 mb-4">Active trainers on the platform</p>
@@ -258,10 +258,17 @@ export default function AdminPlatformAnalytics() {
                       <tr key={t.userId} className="hover:bg-gray-50">
                         <td className="px-3 py-3">
                           <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full text-white font-bold text-xs flex items-center justify-center flex-shrink-0"
-                              style={{ background: VIOLET }}>
-                              {t.name?.charAt(0)}
-                            </div>
+                            {/* ✅ Trainer photo in verified trainers table */}
+                            {t.profileImage ? (
+                              <img src={t.profileImage} alt={t.name}
+                                className="w-7 h-7 rounded-full object-cover flex-shrink-0 border"
+                                style={{ borderColor: VIOLET }} />
+                            ) : (
+                              <div className="w-7 h-7 rounded-full text-white font-bold text-xs flex items-center justify-center flex-shrink-0"
+                                style={{ background: VIOLET }}>
+                                {t.name?.charAt(0)}
+                              </div>
+                            )}
                             <span className="font-semibold text-gray-800 text-xs">{t.name}</span>
                           </div>
                         </td>

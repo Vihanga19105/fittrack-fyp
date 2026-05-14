@@ -3,6 +3,7 @@ package com.fittrack.backend.controller;
 import com.fittrack.backend.model.ChatMessage;
 import com.fittrack.backend.model.User;
 import com.fittrack.backend.repository.ChatRepository;
+import com.fittrack.backend.repository.ClientProfileRepository;
 import com.fittrack.backend.repository.SubscriptionRepository;
 import com.fittrack.backend.repository.TrainerProfileRepository;
 import com.fittrack.backend.repository.UserRepository;
@@ -26,6 +27,7 @@ public class ChatController {
     private final UserRepository userRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final TrainerProfileRepository trainerProfileRepository;
+    private final ClientProfileRepository clientProfileRepository;
     private final NotificationService notificationService;
 
     // ── SEND MESSAGE ──
@@ -49,7 +51,6 @@ public class ChatController {
 
         chatRepository.save(msg);
 
-        // ── NOTIFICATION: receiver gets notified of new message ──
         notificationService.newMessage(receiver, sender.getName());
 
         return ResponseEntity.ok(msg);
@@ -81,16 +82,19 @@ public class ChatController {
                 .findByEmail(principal.getName()).orElseThrow();
 
         String role = me.getRole().toString();
+        boolean isTrainer = role.equals("TRAINER") || role.equals("ROLE_TRAINER");
 
         List<User> chatUsers;
 
-        if (role.equals("TRAINER") || role.equals("ROLE_TRAINER")) {
+        if (isTrainer) {
+            // Trainer sees their active clients
             chatUsers = subscriptionRepository
                     .findByTrainerAndStatusIn(me, Arrays.asList("ACTIVE"))
                     .stream()
                     .map(s -> s.getClient())
                     .collect(Collectors.toList());
         } else {
+            // Client sees their active trainer
             chatUsers = subscriptionRepository
                     .findByClient(me)
                     .stream()
@@ -102,14 +106,21 @@ public class ChatController {
         List<Map<String, Object>> chatList = chatUsers.stream().map(user -> {
             List<ChatMessage> conv = chatRepository.findConversation(me, user);
             Map<String, Object> chat = new HashMap<>();
-            chat.put("userId",     user.getId());
-            chat.put("userName",   user.getName());
-            chat.put("userEmail",  user.getEmail());
+            chat.put("userId",    user.getId());
+            chat.put("userName",  user.getName());
+            chat.put("userEmail", user.getEmail());
 
-            // ✅ Include trainer profile image
-            trainerProfileRepository.findByUser(user).ifPresent(tp ->
-                chat.put("profileImage", tp.getProfileImage())
-            );
+            if (isTrainer) {
+                // ✅ Trainer chat list: user is a CLIENT → use clientProfileRepository
+                clientProfileRepository.findByUser(user).ifPresent(cp ->
+                    chat.put("profileImage", cp.getProfileImage())
+                );
+            } else {
+                // ✅ Client chat list: user is a TRAINER → use trainerProfileRepository
+                trainerProfileRepository.findByUser(user).ifPresent(tp ->
+                    chat.put("profileImage", tp.getProfileImage())
+                );
+            }
 
             if (!conv.isEmpty()) {
                 ChatMessage last = conv.get(conv.size() - 1);

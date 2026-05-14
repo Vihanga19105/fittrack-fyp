@@ -36,6 +36,20 @@ export default function AdminManageUsers() {
     return matchSearch && matchTab;
   });
 
+  // Role color helper
+  const roleStyle = (role) => {
+    if (role === "TRAINER") return { background: "#dbeafe", color: "#1d4ed8" };
+    if (role === "ADMIN")   return { background: VIOLET_LIGHT, color: VIOLET_DARK };
+    return { background: "#dcfce7", color: "#166534" };
+  };
+
+  // Avatar color per role
+  const avatarBg = (role) => {
+    if (role === "TRAINER") return "#3b82f6";
+    if (role === "ADMIN")   return VIOLET;
+    return "#10b981";
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen" style={{ background: "#faf5ff" }}>
       <div className="text-center">
@@ -49,7 +63,7 @@ export default function AdminManageUsers() {
   return (
     <div className="min-h-screen pb-10" style={{ background: "#faf5ff" }}>
 
-      {/* ── HERO ── */}
+      {/* HERO */}
       <div className="relative text-white px-8 py-12 overflow-hidden"
         style={{
           backgroundImage: `linear-gradient(135deg, rgba(10,35,66,0.92) 0%, rgba(10,35,66,0.65) 50%, rgba(124,58,237,0.80) 100%), url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1400&q=80')`,
@@ -66,7 +80,6 @@ export default function AdminManageUsers() {
             </p>
             <p className="text-purple-200 text-sm mt-1">{users.length} total users on the platform</p>
           </div>
-          {/* Stat pills */}
           <div className="hidden md:flex gap-2">
             {[
               { label: "Total",    value: counts.ALL     },
@@ -128,20 +141,27 @@ export default function AdminManageUsers() {
                     <td className="px-5 py-4 text-gray-400 text-xs">{i + 1}</td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full text-white font-bold text-xs flex items-center justify-center flex-shrink-0"
-                          style={{ background: VIOLET }}>
-                          {user.name?.charAt(0)}
-                        </div>
+                        {/* ✅ Profile photo — trainer or client */}
+                        {user.profileImage ? (
+                          <img
+                            src={user.profileImage}
+                            alt={user.name}
+                            className="w-9 h-9 rounded-full object-cover flex-shrink-0 border-2"
+                            style={{ borderColor: avatarBg(user.role) }}
+                          />
+                        ) : (
+                          <div
+                            className="w-9 h-9 rounded-full text-white font-bold text-xs flex items-center justify-center flex-shrink-0"
+                            style={{ background: avatarBg(user.role) }}>
+                            {user.name?.charAt(0)}
+                          </div>
+                        )}
                         <span className="font-semibold text-gray-800">{user.name}</span>
                       </div>
                     </td>
                     <td className="px-5 py-4 text-gray-500 text-xs">{user.email}</td>
                     <td className="px-5 py-4">
-                      <span className="px-2.5 py-1 rounded-full text-xs font-bold"
-                        style={{
-                          background: user.role === "TRAINER" ? "#dbeafe" : user.role === "ADMIN" ? VIOLET_LIGHT : "#dcfce7",
-                          color:      user.role === "TRAINER" ? "#1d4ed8" : user.role === "ADMIN" ? VIOLET_DARK  : "#166534",
-                        }}>
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold" style={roleStyle(user.role)}>
                         {user.role}
                       </span>
                     </td>

@@ -51,8 +51,8 @@ export default function AdminDashboard() {
   };
 
   const pieData = [
-    { name: "Clients",  value: stats.totalClients,  color: VIOLET       },
-    { name: "Trainers", value: stats.totalTrainers,  color: "#10b981"    },
+    { name: "Clients",  value: stats.totalClients,  color: VIOLET    },
+    { name: "Trainers", value: stats.totalTrainers,  color: "#10b981" },
   ];
 
   const monthlyData = (() => {
@@ -79,7 +79,7 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen pb-10" style={{ background: "#faf5ff" }}>
 
-      {/* ── HERO ── */}
+      {/* HERO */}
       <div className="relative text-white px-8 py-12 overflow-hidden"
         style={{
           backgroundImage: `linear-gradient(135deg, rgba(10,35,66,0.92) 0%, rgba(10,35,66,0.65) 50%, rgba(124,58,237,0.80) 100%), url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1400&q=80')`,
@@ -96,7 +96,6 @@ export default function AdminDashboard() {
             </p>
             <p className="text-purple-200 text-sm mt-1">{stats.totalUsers} total users on the platform</p>
           </div>
-          
         </div>
       </div>
 
@@ -126,8 +125,6 @@ export default function AdminDashboard() {
 
         {/* CHARTS */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-          {/* PIE CHART */}
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <h3 className="font-bold text-gray-800 mb-1">User Distribution</h3>
             <p className="text-xs text-gray-400 mb-4">Clients vs Trainers</p>
@@ -148,7 +145,6 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          {/* BAR CHART */}
           <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6">
             <h3 className="font-bold text-gray-800 mb-1">Monthly Registrations</h3>
             <p className="text-xs text-gray-400 mb-4">New clients and trainers per month</p>
@@ -159,8 +155,8 @@ export default function AdminDashboard() {
                   <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#9ca3af" }} />
                   <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} />
                   <Tooltip contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }} />
-                  <Bar dataKey="clients"  fill={VIOLET}    radius={[4,4,0,0]} name="Clients"  />
-                  <Bar dataKey="trainers" fill="#10b981"   radius={[4,4,0,0]} name="Trainers" />
+                  <Bar dataKey="clients"  fill={VIOLET}  radius={[4,4,0,0]} name="Clients"  />
+                  <Bar dataKey="trainers" fill="#10b981" radius={[4,4,0,0]} name="Trainers" />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -178,8 +174,7 @@ export default function AdminDashboard() {
               <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
                 Pending Trainer Approvals
                 {stats.pendingTrainers > 0 && (
-                  <span className="px-2 py-0.5 rounded-full text-xs text-white font-bold"
-                    style={{ background: "#f59e0b",borderColor: "rgba(10,35,66,0.45)",}}>
+                  <span className="px-2 py-0.5 rounded-full text-xs text-white font-bold" style={{ background: "#f59e0b" }}>
                     {stats.pendingTrainers}
                   </span>
                 )}
@@ -203,10 +198,17 @@ export default function AdminDashboard() {
               {pendingTrainers.slice(0, 3).map(trainer => (
                 <div key={trainer.userId} className="flex justify-between items-center px-6 py-4 hover:bg-gray-50 transition">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full text-white font-bold flex items-center justify-center"
-                      style={{ background: "#f59e0b" }}>
-                      {trainer.name?.charAt(0)}
-                    </div>
+                    {/* ✅ Trainer photo in pending list */}
+                    {trainer.profileImage ? (
+                      <img src={trainer.profileImage} alt={trainer.name}
+                        className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2"
+                        style={{ borderColor: "#f59e0b" }} />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full text-white font-bold flex items-center justify-center flex-shrink-0"
+                        style={{ background: "#f59e0b" }}>
+                        {trainer.name?.charAt(0)}
+                      </div>
+                    )}
                     <div>
                       <p className="font-semibold text-gray-800 text-sm">{trainer.name}</p>
                       <p className="text-xs text-gray-400">{trainer.email}</p>
@@ -255,10 +257,17 @@ export default function AdminDashboard() {
                     style={{ background: i % 2 === 0 ? "white" : "#fafafa" }}>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full text-white font-bold text-xs flex items-center justify-center"
-                          style={{ background: VIOLET }}>
-                          {user.name?.charAt(0)}
-                        </div>
+                        {/* ✅ User photo in recent users table */}
+                        {user.profileImage ? (
+                          <img src={user.profileImage} alt={user.name}
+                            className="w-9 h-9 rounded-full object-cover flex-shrink-0 border-2"
+                            style={{ borderColor: VIOLET }} />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full text-white font-bold text-xs flex items-center justify-center flex-shrink-0"
+                            style={{ background: VIOLET }}>
+                            {user.name?.charAt(0)}
+                          </div>
+                        )}
                         <span className="font-semibold text-gray-800">{user.name}</span>
                       </div>
                     </td>
@@ -287,7 +296,6 @@ export default function AdminDashboard() {
             </table>
           </div>
         </div>
-
       </div>
     </div>
   );

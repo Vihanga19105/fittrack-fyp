@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
+import api from "../../api/api";
 
 const API    = "http://localhost:8080/api";
 const WS_URL = "http://localhost:8080/ws";
@@ -16,24 +17,15 @@ export default function TrainerChatRoom() {
   const token = localStorage.getItem("token");
   const myId  = localStorage.getItem("userId");
 
-  const [messages, setMessages]     = useState([]);
-  const [clientName, setClientName] = useState(`Client #${id}`);
-  const [message, setMessage]       = useState("");
-  const [connected, setConnected]   = useState(false);
-  const [sending, setSending]       = useState(false);
+  const [messages, setMessages]           = useState([]);
+  const [clientName, setClientName]       = useState(`Client #${id}`);
+  const [clientPhoto, setClientPhoto]     = useState(null);
+  const [message, setMessage]             = useState("");
+  const [connected, setConnected]         = useState(false);
+  const [sending, setSending]             = useState(false);
 
   const stompClient = useRef(null);
   const chatEndRef  = useRef(null);
-
-  useEffect(() => {
-    fetchHistory();
-    connectWebSocket();
-    return () => disconnectWebSocket();
-  }, [id]);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
 
   const fetchHistory = async () => {
     try {
@@ -44,6 +36,15 @@ export default function TrainerChatRoom() {
         const other = res.data.find(m => String(m.sender.id) !== String(myId));
         if (other) setClientName(other.sender.name);
       }
+    } catch {}
+  };
+
+  // ✅ Fetch client profile photo
+  const fetchClientProfile = async () => {
+    try {
+      const res = await api.get(`/api/profile/client/${id}`);
+      if (res.data?.profileImage) setClientPhoto(res.data.profileImage);
+      if (res.data?.name)         setClientName(res.data.name);
     } catch {}
   };
 
@@ -80,6 +81,17 @@ export default function TrainerChatRoom() {
   const disconnectWebSocket = () => {
     if (stompClient.current) stompClient.current.deactivate();
   };
+
+  useEffect(() => {
+    fetchHistory();
+    fetchClientProfile();
+    connectWebSocket();
+    return () => disconnectWebSocket();
+  }, [id]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const sendMessage = async () => {
     if (!message.trim()) return;
@@ -132,10 +144,21 @@ export default function TrainerChatRoom() {
             className="w-10 h-10 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center text-white font-bold text-lg transition-all flex-shrink-0">
             ←
           </button>
-          <div className="w-12 h-12 rounded-full text-white font-bold text-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: `linear-gradient(135deg, ${TEAL_DARK}, ${TEAL})` }}>
-            {clientName?.charAt(0).toUpperCase()}
-          </div>
+
+          {/* ✅ Client photo in header */}
+          {clientPhoto ? (
+            <img
+              src={clientPhoto}
+              alt={clientName}
+              className="w-12 h-12 rounded-full object-cover flex-shrink-0 border-2 border-white/40"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full text-white font-bold text-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: `linear-gradient(135deg, ${TEAL_DARK}, ${TEAL})` }}>
+              {clientName?.charAt(0).toUpperCase()}
+            </div>
+          )}
+
           <div className="flex-1">
             <h1 className="text-xl font-black tracking-tight">{clientName}</h1>
             <p className="text-xs font-medium mt-0.5"
@@ -164,12 +187,24 @@ export default function TrainerChatRoom() {
                   const isMe = String(msg.sender.id) === String(myId);
                   return (
                     <div key={msg.id || i} className={`flex mb-3 ${isMe ? "justify-end" : "justify-start"}`}>
+
+                      {/* ✅ Client photo in message bubbles */}
                       {!isMe && (
-                        <div className="w-8 h-8 rounded-full text-white text-xs font-bold flex items-center justify-center mr-2 flex-shrink-0 self-end"
-                          style={{ background: TEAL }}>
-                          {msg.sender.name?.charAt(0).toUpperCase()}
-                        </div>
+                        clientPhoto ? (
+                          <img
+                            src={clientPhoto}
+                            alt={msg.sender.name}
+                            className="w-8 h-8 rounded-full object-cover mr-2 flex-shrink-0 self-end border"
+                            style={{ borderColor: TEAL }}
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full text-white text-xs font-bold flex items-center justify-center mr-2 flex-shrink-0 self-end"
+                            style={{ background: TEAL }}>
+                            {msg.sender.name?.charAt(0).toUpperCase()}
+                          </div>
+                        )
                       )}
+
                       <div className="max-w-[65%]">
                         <div className="px-4 py-2.5 rounded-2xl text-sm"
                           style={{

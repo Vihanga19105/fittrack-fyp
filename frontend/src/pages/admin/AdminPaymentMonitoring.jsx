@@ -69,7 +69,7 @@ export default function AdminPaymentMonitoring() {
   return (
     <div className="min-h-screen pb-10" style={{ background: "#faf5ff" }}>
 
-      {/* ── HERO ── */}
+      {/* HERO */}
       <div className="relative text-white px-8 py-12 overflow-hidden"
         style={{
           backgroundImage: `linear-gradient(135deg, rgba(10,35,66,0.92) 0%, rgba(10,35,66,0.65) 50%, rgba(124,58,237,0.80) 100%), url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1400&q=80')`,
@@ -86,24 +86,18 @@ export default function AdminPaymentMonitoring() {
             </p>
             <p className="text-purple-200 text-sm mt-1">{subscriptions.length} total subscriptions</p>
           </div>
-          {/* Stat pills */}
           <div className="hidden md:flex gap-2 flex-wrap">
-            <div className="bg-white/15 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center border border-white/20">
-              <p className="text-xs text-purple-200 mb-0.5">Total Revenue</p>
-              <p className="font-black text-white text-sm leading-none">LKR {totalRevenue.toLocaleString()}</p>
-            </div>
-            <div className="bg-white/15 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center border border-white/20">
-              <p className="text-xs text-purple-200 mb-0.5">Active Revenue</p>
-              <p className="font-black text-white text-sm leading-none">LKR {activeRevenue.toLocaleString()}</p>
-            </div>
-            <div className="bg-white/15 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center border border-white/20">
-              <p className="text-xs text-purple-200 mb-0.5">Active Subs</p>
-              <p className="font-black text-white text-xl leading-none">{statusCounts.ACTIVE}</p>
-            </div>
-            <div className="bg-white/15 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center border border-white/20">
-              <p className="text-xs text-purple-200 mb-0.5">Pending</p>
-              <p className="font-black text-white text-xl leading-none">{statusCounts.PENDING}</p>
-            </div>
+            {[
+              { label: "Total Revenue",  value: `LKR ${totalRevenue.toLocaleString()}`  },
+              { label: "Active Revenue", value: `LKR ${activeRevenue.toLocaleString()}` },
+              { label: "Active Subs",    value: statusCounts.ACTIVE                      },
+              { label: "Pending",        value: statusCounts.PENDING                     },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-white/15 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center border border-white/20">
+                <p className="text-xs text-purple-200 mb-0.5">{label}</p>
+                <p className="font-black text-white text-sm leading-none">{value}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -157,19 +151,44 @@ export default function AdminPaymentMonitoring() {
                     <tr key={s.id} className="hover:bg-gray-50 transition"
                       style={{ background: i % 2 === 0 ? "white" : "#fafafa" }}>
                       <td className="px-5 py-4 text-gray-400 text-xs">{i + 1}</td>
+
+                      {/* ✅ Client photo in payments table */}
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full text-white font-bold text-xs flex items-center justify-center flex-shrink-0"
-                            style={{ background: VIOLET }}>
-                            {s.clientName?.charAt(0)}
-                          </div>
+                          {s.clientProfileImage ? (
+                            <img src={s.clientProfileImage} alt={s.clientName}
+                              className="w-8 h-8 rounded-full object-cover flex-shrink-0 border-2"
+                              style={{ borderColor: VIOLET }} />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full text-white font-bold text-xs flex items-center justify-center flex-shrink-0"
+                              style={{ background: VIOLET }}>
+                              {s.clientName?.charAt(0)}
+                            </div>
+                          )}
                           <div>
                             <p className="font-semibold text-gray-800 text-sm">{s.clientName}</p>
                             <p className="text-xs text-gray-400">{s.clientEmail}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4 font-medium text-gray-700 text-sm">{s.trainerName || "—"}</td>
+
+                      {/* ✅ Trainer photo in payments table */}
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2">
+                          {s.trainerProfileImage ? (
+                            <img src={s.trainerProfileImage} alt={s.trainerName}
+                              className="w-7 h-7 rounded-full object-cover flex-shrink-0 border"
+                              style={{ borderColor: "#10b981" }} />
+                          ) : (
+                            <div className="w-7 h-7 rounded-full text-white font-bold text-xs flex items-center justify-center flex-shrink-0"
+                              style={{ background: "#10b981" }}>
+                              {s.trainerName?.charAt(0)}
+                            </div>
+                          )}
+                          <span className="font-medium text-gray-700 text-sm">{s.trainerName || "—"}</span>
+                        </div>
+                      </td>
+
                       <td className="px-5 py-4 font-bold text-sm"
                         style={{ color: (s.status === "ACTIVE" || s.status === "EXPIRED") ? "#10b981" : "#9ca3af" }}>
                         {s.trainerPrice ? `LKR ${Number(s.trainerPrice).toLocaleString()}` : "—"}
@@ -177,8 +196,7 @@ export default function AdminPaymentMonitoring() {
                       <td className="px-5 py-4 text-gray-500 text-xs">{s.startDate || "—"}</td>
                       <td className="px-5 py-4 text-gray-500 text-xs">{s.endDate   || "—"}</td>
                       <td className="px-5 py-4">
-                        <span className="px-2.5 py-1 rounded-full text-xs font-bold"
-                          style={statusStyle(s.status)}>
+                        <span className="px-2.5 py-1 rounded-full text-xs font-bold" style={statusStyle(s.status)}>
                           {s.status}
                         </span>
                       </td>
