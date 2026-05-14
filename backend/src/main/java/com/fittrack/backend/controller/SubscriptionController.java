@@ -300,9 +300,10 @@ public class SubscriptionController {
         dto.setTrainerName(sub.getTrainer().getName());
         dto.setTrainerEmail(sub.getTrainer().getEmail());
         trainerProfileRepository.findByUser(sub.getTrainer()).ifPresent(tp -> {
-            dto.setTrainerSpecialization(tp.getSpecialization());
-            dto.setTrainerPrice(tp.getPricePerMonth());
-        });
+    dto.setTrainerSpecialization(tp.getSpecialization());
+    dto.setTrainerPrice(tp.getPricePerMonth());
+    dto.setTrainerProfileImage(tp.getProfileImage());
+});
         dto.setStatus(sub.getStatus());
         dto.setStartDate(sub.getStartDate() != null
                 ? sub.getStartDate().toString() : null);

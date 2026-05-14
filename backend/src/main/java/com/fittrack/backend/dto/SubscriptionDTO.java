@@ -26,6 +26,7 @@ public class SubscriptionDTO {
     private String trainerEmail;
     private String trainerSpecialization;
     private Double trainerPrice;
+    private String trainerProfileImage;
 
     // Subscription info
     private String status;

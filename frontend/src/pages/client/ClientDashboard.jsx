@@ -676,10 +676,19 @@ export default function ClientDashboard() {
                 </div>
               ) : (
                 <div className="text-center">
-                  <div className="w-16 h-16 rounded-full text-white font-bold text-2xl flex items-center justify-center mx-auto mb-3"
-                    style={{ background: BLUE }}>
-                    {subscription.trainerName?.charAt(0)}
-                  </div>
+                  {subscription.trainerProfileImage ? (
+  <img
+    src={subscription.trainerProfileImage}
+    alt={subscription.trainerName}
+    className="w-16 h-16 rounded-full object-cover mx-auto mb-3 border-2"
+    style={{ borderColor: BLUE }}
+  />
+) : (
+  <div className="w-16 h-16 rounded-full text-white font-bold text-2xl flex items-center justify-center mx-auto mb-3"
+    style={{ background: BLUE }}>
+    {subscription.trainerName?.charAt(0)}
+  </div>
+)}
                   <p className="font-bold text-gray-800">{subscription.trainerName}</p>
                   <span className="inline-block mt-1 px-3 py-1 rounded-full text-xs font-bold text-white"
                     style={{ background: getStatusColor(subscription.status) }}>

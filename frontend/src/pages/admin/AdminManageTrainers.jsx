@@ -277,10 +277,22 @@ export default function AdminManageTrainers() {
                       onClick={() => setSelectedTrainer(isSelected ? null : trainer)}
                       className="flex items-center gap-4 px-5 py-4 cursor-pointer transition-all"
                       style={{ background: isSelected ? VIOLET_LIGHT : "transparent" }}>
-                      <div className="w-10 h-10 rounded-full text-white font-bold text-sm flex items-center justify-center flex-shrink-0"
-                        style={{ background: isVerified ? VIOLET : "#e5e7eb", color: isVerified ? "white" : "#9ca3af" }}>
-                        {trainer.name?.charAt(0)}
-                      </div>
+
+                      {/* ✅ LIST ROW AVATAR — shows photo if available */}
+                      {trainer.profileImage ? (
+                        <img
+                          src={trainer.profileImage}
+                          alt={trainer.name}
+                          className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2"
+                          style={{ borderColor: isVerified ? VIOLET : "#e5e7eb" }}
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full text-white font-bold text-sm flex items-center justify-center flex-shrink-0"
+                          style={{ background: isVerified ? VIOLET : "#e5e7eb", color: isVerified ? "white" : "#9ca3af" }}>
+                          {trainer.name?.charAt(0)}
+                        </div>
+                      )}
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-semibold text-gray-800 text-sm">{trainer.name}</p>
@@ -312,10 +324,22 @@ export default function AdminManageTrainers() {
                 {selectedTrainer ? (
                   <div className="p-5">
                     <div className="text-center mb-4">
-                      <div className="w-16 h-16 rounded-2xl text-white font-bold text-2xl flex items-center justify-center mx-auto mb-2"
-                        style={{ background: `linear-gradient(135deg, ${VIOLET_DARK}, ${VIOLET})` }}>
-                        {selectedTrainer.name?.charAt(0)}
-                      </div>
+
+                      {/* ✅ DETAIL PANEL AVATAR — shows photo if available */}
+                      {selectedTrainer.profileImage ? (
+                        <img
+                          src={selectedTrainer.profileImage}
+                          alt={selectedTrainer.name}
+                          className="w-20 h-20 rounded-2xl object-cover mx-auto mb-2 border-2"
+                          style={{ borderColor: VIOLET_LIGHT }}
+                        />
+                      ) : (
+                        <div className="w-20 h-20 rounded-2xl text-white font-bold text-2xl flex items-center justify-center mx-auto mb-2"
+                          style={{ background: `linear-gradient(135deg, ${VIOLET_DARK}, ${VIOLET})` }}>
+                          {selectedTrainer.name?.charAt(0)}
+                        </div>
+                      )}
+
                       <h3 className="font-bold text-gray-800">{selectedTrainer.name}</h3>
                       <p className="text-xs text-gray-400 mt-0.5">{selectedTrainer.email}</p>
                       <span className="inline-block mt-2 px-3 py-1 rounded-full text-xs font-bold"
@@ -400,7 +424,7 @@ export default function AdminManageTrainers() {
 
                         <div className="p-6">
                           <div className="flex flex-col md:flex-row md:items-start gap-5">
-                            {/* PHOTO */}
+                            {/* PHOTO — already correct in Pending tab */}
                             <div className="flex-shrink-0">
                               {trainer.profileImage ? (
                                 <img src={trainer.profileImage} alt={trainer.name}
