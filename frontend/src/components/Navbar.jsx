@@ -1,23 +1,39 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
+import axios from "axios";
 
 const NAVY = "#0A2342";
 const BLUE = "#29ABE2";
+const API  = "http://localhost:8080/api";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
+  const [profileImage, setProfileImage] = useState(null);
+  const navigate  = useNavigate();
+  const location  = useLocation();
 
-  const token = localStorage.getItem("token");
-  const role  = localStorage.getItem("role");
-  const name  = localStorage.getItem("name");
+  const token      = localStorage.getItem("token");
+  const role       = localStorage.getItem("role");
+  const name       = localStorage.getItem("name");
   const isLoggedIn = !!token;
 
-  // Dashboard pages have their own sidebar layout — navbar should NOT be fixed there
+  useEffect(() => {
+    if (!token || !role) return;
+    const endpoint =
+      role === "CLIENT"  ? "/profile/client"  :
+      role === "TRAINER" ? "/profile/trainer" :
+      null;
+    if (!endpoint) return;
+    axios.get(`${API}${endpoint}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => { if (res.data?.profileImage) setProfileImage(res.data.profileImage); })
+      .catch(() => {});
+  }, [token, role]);
+
   const isDashboardPage =
-    location.pathname.startsWith("/client") ||
+    location.pathname.startsWith("/client")  ||
     location.pathname.startsWith("/trainer") ||
     location.pathname.startsWith("/admin");
 
@@ -37,8 +53,8 @@ export default function Navbar() {
       confirmButtonColor: BLUE,
       cancelButtonColor: "#475569",
       confirmButtonText: "Yes, Logout",
-      background: NAVY,
-      color: "#ffffff",
+      background:  "#ffffff",
+      color:"black",
     }).then((result) => {
       if (result.isConfirmed) {
         localStorage.clear();
@@ -49,13 +65,29 @@ export default function Navbar() {
   };
 
   const menuItems = [
-    { label: "Home",            path: "/"               },
-    { label: "About",           path: "/about"          },
-    { label: "Trainers",        path: "/trainers"       },
+    { label: "Home",              path: "/"               },
+    { label: "About",             path: "/about"          },
+    { label: "Trainers",          path: "/trainers"       },
     { label: "🎯 Goal Predictor", path: "/goal-predictor" },
-    { label: "FAQ",             path: "/faq"            },
-    { label: "Contact",         path: "/contact"        },
+    { label: "FAQ",               path: "/faq"            },
+    { label: "Contact",           path: "/contact"        },
   ];
+
+  // ✅ Inlined as a variable — not a sub-component — avoids static-components error
+  const avatarJsx = profileImage ? (
+    <img
+      src={profileImage}
+      alt={name}
+      className="w-8 h-8 rounded-lg object-cover border-2"
+      style={{ borderColor: BLUE }}
+    />
+  ) : (
+    <div
+      className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
+      style={{ background: BLUE }}>
+      {name?.charAt(0)?.toUpperCase()}
+    </div>
+  );
 
   return (
     <header
@@ -115,11 +147,10 @@ export default function Navbar() {
           ) : (
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
-                  style={{ background: BLUE }}>
-                  {name?.charAt(0)?.toUpperCase()}
-                </div>
-                <span className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.8)" }}>{name}</span>
+                {avatarJsx}
+                <span className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.8)" }}>
+                  {name}
+                </span>
               </div>
               <button onClick={logout}
                 className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all"
@@ -168,9 +199,10 @@ export default function Navbar() {
               </>
             ) : (
               <>
-                <p className="text-xs px-4" style={{ color: "rgba(255,255,255,0.45)" }}>
-                  Logged in as <span style={{ color: BLUE }} className="font-semibold">{name}</span>
-                </p>
+                <div className="flex items-center gap-2 px-4 py-2">
+                  {avatarJsx}
+                  <span className="text-sm font-semibold" style={{ color: BLUE }}>{name}</span>
+                </div>
                 <button onClick={() => { setOpen(false); logout(); }}
                   className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold text-white"
                   style={{ background: "#ef4444" }}>Logout</button>

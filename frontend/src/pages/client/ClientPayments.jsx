@@ -16,24 +16,41 @@ const BLUE_DARK = "#1A8FBF";
 const BLUE_LIGHT = "#E8F7FD";
 const NAVY = "#0A2342";
 
+// ── Reusable trainer avatar ──
+function TrainerAvatar({ src, name, size = 16, rounded = "full" }) {
+  return src ? (
+    <img
+      src={src}
+      alt={name}
+      className={`w-${size} h-${size} rounded-${rounded} object-cover flex-shrink-0 border-2`}
+      style={{ borderColor: BLUE }}
+    />
+  ) : (
+    <div
+      className={`w-${size} h-${size} rounded-${rounded} text-white font-black text-${size > 12 ? "2xl" : "lg"} flex items-center justify-center flex-shrink-0`}
+      style={{ background: BLUE }}
+    >
+      {name?.charAt(0)}
+    </div>
+  );
+}
+
 export default function ClientPayments() {
   const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [payingSubId, setPayingSubId] = useState(null);
-  const [activeTab, setActiveTab] = useState("current");
   const token = localStorage.getItem("token");
 
-  useEffect(() => { loadSubscriptions(); }, []);
+ const loadSubscriptions = () => {
+  api.get("/api/subscriptions/my")
+    .then(res => { setSubscriptions(res.data); setLoading(false); })
+    .catch(() => setLoading(false));
+};
 
-  const loadSubscriptions = () => {
-    api.get("/api/subscriptions/my")
-      .then(res => { setSubscriptions(res.data); setLoading(false); })
-      .catch(() => setLoading(false));
-  };
+useEffect(() => { loadSubscriptions(); }, []);
 
   const hasActiveSub = subscriptions.some(s => s.status === "ACTIVE");
 
-  // Sort: ACTIVE first, then ACCEPTED, then PENDING
   const currentSubs = subscriptions
     .filter(s => ["PENDING", "ACCEPTED", "ACTIVE"].includes(s.status))
     .sort((a, b) => {
@@ -48,7 +65,6 @@ export default function ClientPayments() {
   const paidSubs = subscriptions.filter(s => s.status === "ACTIVE" || s.status === "EXPIRED");
   const totalSpent = paidSubs.reduce((sum, s) => sum + (s.trainerPrice || 0), 0);
 
-  // ── STAR RATING ──
   const getStarHtml = () => `
     <div style="text-align:center;margin-bottom:16px">
       <p style="font-size:14px;color:#6b7280;margin-bottom:8px">Tap a star to rate</p>
@@ -187,8 +203,8 @@ export default function ClientPayments() {
     );
   }
 
-  const activeSub   = currentSubs.find(s => s.status === "ACTIVE");
-  const otherSubs   = currentSubs.filter(s => s.status !== "ACTIVE");
+  const activeSub = currentSubs.find(s => s.status === "ACTIVE");
+  const otherSubs = currentSubs.filter(s => s.status !== "ACTIVE");
 
   return (
     <div className="min-h-screen" style={{ background: "#f0f9ff" }}>
@@ -202,14 +218,10 @@ export default function ClientPayments() {
           backgroundPosition: "center",
           minHeight: "200px",
         }}>
-
         <div className="absolute right-10 -top-6 w-56 h-56 bg-white/10 rounded-full pointer-events-none" />
         <div className="absolute right-40 top-16 w-32 h-32 bg-white/10 rounded-full pointer-events-none" />
-
         <div className="relative z-10 max-w-4xl mx-auto">
           <div className="flex items-start justify-between gap-6 flex-wrap">
-
-            {/* LEFT */}
             <div>
               <p className="text-blue-200 text-xs font-semibold uppercase tracking-widest mb-1">Payments</p>
               <h1 className="text-4xl font-black tracking-tight">Subscription & Payments 💳</h1>
@@ -218,42 +230,50 @@ export default function ClientPayments() {
               </p>
               <p className="text-blue-200 text-sm mt-1">Manage your trainer subscriptions</p>
             </div>
-
-            {/* RIGHT — stat pills */}
-            <div className="bg-white/15 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center border border-white/20">
-  <p className="text-xs text-blue-200 mb-0.5">Monthly Fee</p>
-  <p className="font-bold text-white text-sm leading-none">LKR {activeSub?.trainerPrice?.toLocaleString() || "—"}</p>
-</div>
-<div className="bg-white/15 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center border border-white/20">
-  <p className="text-xs text-blue-200 mb-0.5">Total Spent</p>
-  <p className="font-bold text-white text-sm leading-none">LKR {totalSpent.toLocaleString()}</p>
-</div>
-<div className="bg-white/15 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center border border-white/20">
-  <p className="text-xs text-blue-200 mb-0.5">Status</p>
-  <p className="font-bold text-white text-sm leading-none">{hasActiveSub ? "✅ Active" : "❌ None"}</p>
-</div>
+            <div className="hidden md:flex gap-2">
+              <div className="bg-white/15 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center border border-white/20">
+                <p className="text-xs text-blue-200 mb-0.5">Monthly Fee</p>
+                <p className="font-bold text-white text-sm leading-none">LKR {activeSub?.trainerPrice?.toLocaleString() || "—"}</p>
+              </div>
+              <div className="bg-white/15 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center border border-white/20">
+                <p className="text-xs text-blue-200 mb-0.5">Total Spent</p>
+                <p className="font-bold text-white text-sm leading-none">LKR {totalSpent.toLocaleString()}</p>
+              </div>
+              <div className="bg-white/15 backdrop-blur-sm px-4 py-2.5 rounded-xl text-center border border-white/20">
+                <p className="text-xs text-blue-200 mb-0.5">Status</p>
+                <p className="font-bold text-white text-sm leading-none">{hasActiveSub ? "✅ Active" : "❌ None"}</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      {/* ── END HERO ── */}
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
 
-        {/* ── ACTIVE SUBSCRIPTION — TOP PRIORITY ── */}
+        {/* ── ACTIVE SUBSCRIPTION ── */}
         {activeSub && (
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden border-2" style={{ borderColor: "#bbf7d0" }}>
-            {/* green top bar */}
             <div className="px-6 py-3 flex items-center gap-2" style={{ background: "linear-gradient(135deg, #059669, #10b981)" }}>
               <span className="text-white text-lg">✅</span>
               <p className="text-white font-bold text-sm">Active Subscription</p>
               <span className="ml-auto text-xs text-green-100">Until {activeSub.endDate}</span>
             </div>
-
             <div className="p-6">
               <div className="flex items-center gap-4 mb-5">
-                <div className="w-16 h-16 rounded-full text-white font-black text-2xl flex items-center justify-center flex-shrink-0" style={{ background: BLUE }}>
-                  {activeSub.trainerName?.charAt(0)}
-                </div>
+                {/* ✅ FIXED: shows trainer photo */}
+                {activeSub.trainerProfileImage ? (
+                  <img
+                    src={activeSub.trainerProfileImage}
+                    alt={activeSub.trainerName}
+                    className="w-16 h-16 rounded-full object-cover flex-shrink-0 border-2"
+                    style={{ borderColor: BLUE }}
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-full text-white font-black text-2xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: BLUE }}>
+                    {activeSub.trainerName?.charAt(0)}
+                  </div>
+                )}
                 <div>
                   <h2 className="text-xl font-black text-gray-800">{activeSub.trainerName}</h2>
                   <p className="text-xs text-gray-400">{activeSub.trainerEmail}</p>
@@ -263,13 +283,12 @@ export default function ClientPayments() {
                 </div>
               </div>
 
-              {/* details grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
                 {[
                   { label: "Monthly Price", value: `LKR ${activeSub.trainerPrice?.toLocaleString() || "N/A"}`, color: BLUE_DARK },
-                  { label: "Start Date",    value: activeSub.startDate || "N/A"                                              },
-                  { label: "Expires On",    value: activeSub.endDate   || "N/A"                                              },
-                  { label: "Duration",      value: "30 days"                                                                  },
+                  { label: "Start Date",    value: activeSub.startDate || "N/A" },
+                  { label: "Expires On",    value: activeSub.endDate   || "N/A" },
+                  { label: "Duration",      value: "30 days"                    },
                 ].map(item => (
                   <div key={item.label} className="p-3 rounded-xl" style={{ background: "#f0fdf4" }}>
                     <p className="text-xs text-gray-400">{item.label}</p>
@@ -305,13 +324,22 @@ export default function ClientPayments() {
               return (
                 <div key={sub.id} className="bg-white rounded-2xl shadow-sm border-2 p-5"
                   style={{ borderColor: sc.border }}>
-
-                  {/* HEADER */}
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full text-white font-bold text-lg flex items-center justify-center flex-shrink-0" style={{ background: BLUE }}>
-                        {sub.trainerName?.charAt(0)}
-                      </div>
+                      {/* ✅ FIXED: shows trainer photo */}
+                      {sub.trainerProfileImage ? (
+                        <img
+                          src={sub.trainerProfileImage}
+                          alt={sub.trainerName}
+                          className="w-12 h-12 rounded-full object-cover flex-shrink-0 border-2"
+                          style={{ borderColor: BLUE }}
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full text-white font-bold text-lg flex items-center justify-center flex-shrink-0"
+                          style={{ background: BLUE }}>
+                          {sub.trainerName?.charAt(0)}
+                        </div>
+                      )}
                       <div>
                         <h2 className="font-bold text-gray-800">{sub.trainerName}</h2>
                         <p className="text-xs text-gray-400">{sub.trainerEmail}</p>
@@ -323,7 +351,6 @@ export default function ClientPayments() {
                     </span>
                   </div>
 
-                  {/* DETAILS */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 p-3 rounded-xl" style={{ background: BLUE_LIGHT }}>
                     {[
                       { label: "Monthly Price", value: `LKR ${sub.trainerPrice?.toLocaleString() || "N/A"}`, color: BLUE_DARK },
@@ -338,7 +365,6 @@ export default function ClientPayments() {
                     ))}
                   </div>
 
-                  {/* PENDING */}
                   {sub.status === "PENDING" && (
                     <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: "#fefce8" }}>
                       <span className="text-amber-700 text-sm font-medium">⏳ Waiting for trainer approval...</span>
@@ -346,25 +372,22 @@ export default function ClientPayments() {
                     </div>
                   )}
 
-                  {/* ACCEPTED */}
                   {sub.status === "ACCEPTED" && (
                     <>
                       {hasActiveSub ? (
-                        /* BLOCKED */
                         <div className="p-4 rounded-xl border" style={{ background: "#fefce8", borderColor: "#fde68a" }}>
                           <div className="flex items-start gap-3">
                             <span className="text-xl flex-shrink-0">⚠️</span>
                             <div>
                               <p className="font-bold text-sm text-gray-800">Payment Blocked</p>
                               <p className="text-xs text-gray-500 mt-0.5">
-                                You already have an active subscription with another trainer. You can only pay for one trainer at a time. Cancel your active subscription first if you want to switch to <strong>{sub.trainerName}</strong>.
+                                You already have an active subscription. Cancel it first to switch to <strong>{sub.trainerName}</strong>.
                               </p>
                               <button onClick={() => handleCancel(sub.id)} className="mt-2 text-xs text-red-500 hover:underline font-semibold">Cancel This Request</button>
                             </div>
                           </div>
                         </div>
                       ) : payingSubId === sub.id ? (
-                        /* STRIPE FORM */
                         <div className="bg-gray-50 rounded-2xl border border-gray-100 p-5">
                           <p className="text-sm font-semibold text-gray-700 mb-4">💳 Complete Your Payment</p>
                           <Elements stripe={stripePromise}>
@@ -372,7 +395,6 @@ export default function ClientPayments() {
                           </Elements>
                         </div>
                       ) : (
-                        /* PAY NOW */
                         <div>
                           <div className="flex items-center justify-between mb-3 p-3 rounded-xl" style={{ background: "#f0fdf4" }}>
                             <div className="flex items-center gap-2">
@@ -396,7 +418,7 @@ export default function ClientPayments() {
           </div>
         )}
 
-        {/* ── HISTORY TAB ── */}
+        {/* ── HISTORY ── */}
         {historySubs.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100">
@@ -410,9 +432,20 @@ export default function ClientPayments() {
                   <div key={sub.id} className="border rounded-2xl p-5 hover:shadow-sm transition-all" style={{ borderColor: sc.border }}>
                     <div className="flex items-start justify-between gap-4 mb-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full text-white font-bold flex items-center justify-center flex-shrink-0" style={{ background: BLUE }}>
-                          {sub.trainerName?.charAt(0)}
-                        </div>
+                        {/* ✅ FIXED: shows trainer photo in history */}
+                        {sub.trainerProfileImage ? (
+                          <img
+                            src={sub.trainerProfileImage}
+                            alt={sub.trainerName}
+                            className="w-12 h-12 rounded-full object-cover flex-shrink-0 border-2"
+                            style={{ borderColor: BLUE }}
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full text-white font-bold flex items-center justify-center flex-shrink-0"
+                            style={{ background: BLUE }}>
+                            {sub.trainerName?.charAt(0)}
+                          </div>
+                        )}
                         <div>
                           <p className="font-bold text-gray-800">{sub.trainerName}</p>
                           <p className="text-xs text-gray-400">{sub.trainerEmail}</p>
@@ -461,7 +494,6 @@ export default function ClientPayments() {
           </div>
         )}
 
-        {/* EMPTY STATE */}
         {subscriptions.length === 0 && (
           <div className="text-center py-16 bg-white rounded-2xl shadow-sm">
             <p className="text-5xl mb-4">💳</p>
@@ -475,7 +507,6 @@ export default function ClientPayments() {
           </div>
         )}
 
-        {/* STRIPE SECURITY NOTE */}
         <div className="bg-white rounded-2xl shadow-sm p-4 text-sm text-gray-500 text-center">
           🔒 Payments are secured by Stripe. No card details stored on FitTrack servers.
         </div>

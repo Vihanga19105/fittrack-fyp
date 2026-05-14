@@ -19,6 +19,7 @@ public class SubscriptionDTO {
     private Long clientId;
     private String clientName;
     private String clientEmail;
+    private String clientProfileImage;
 
     // Trainer info
     private Long trainerId;

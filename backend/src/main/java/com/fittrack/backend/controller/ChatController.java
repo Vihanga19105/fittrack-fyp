@@ -4,6 +4,7 @@ import com.fittrack.backend.model.ChatMessage;
 import com.fittrack.backend.model.User;
 import com.fittrack.backend.repository.ChatRepository;
 import com.fittrack.backend.repository.SubscriptionRepository;
+import com.fittrack.backend.repository.TrainerProfileRepository;
 import com.fittrack.backend.repository.UserRepository;
 import com.fittrack.backend.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class ChatController {
     private final ChatRepository chatRepository;
     private final UserRepository userRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final TrainerProfileRepository trainerProfileRepository;
     private final NotificationService notificationService;
 
     // ── SEND MESSAGE ──
@@ -82,7 +84,7 @@ public class ChatController {
 
         List<User> chatUsers;
 
-        if (role.equals("TRAINER")) {
+        if (role.equals("TRAINER") || role.equals("ROLE_TRAINER")) {
             chatUsers = subscriptionRepository
                     .findByTrainerAndStatusIn(me, Arrays.asList("ACTIVE"))
                     .stream()
@@ -100,17 +102,24 @@ public class ChatController {
         List<Map<String, Object>> chatList = chatUsers.stream().map(user -> {
             List<ChatMessage> conv = chatRepository.findConversation(me, user);
             Map<String, Object> chat = new HashMap<>();
-            chat.put("userId", user.getId());
-            chat.put("userName", user.getName());
-            chat.put("userEmail", user.getEmail());
+            chat.put("userId",     user.getId());
+            chat.put("userName",   user.getName());
+            chat.put("userEmail",  user.getEmail());
+
+            // ✅ Include trainer profile image
+            trainerProfileRepository.findByUser(user).ifPresent(tp ->
+                chat.put("profileImage", tp.getProfileImage())
+            );
+
             if (!conv.isEmpty()) {
                 ChatMessage last = conv.get(conv.size() - 1);
-                chat.put("lastMessage", last.getMessage());
+                chat.put("lastMessage",     last.getMessage());
                 chat.put("lastMessageTime", last.getSentAt().toString());
             } else {
-                chat.put("lastMessage", "No messages yet");
+                chat.put("lastMessage",     "No messages yet");
                 chat.put("lastMessageTime", null);
             }
+
             Long unread = chatRepository.countUnreadFromSender(user, me);
             chat.put("unreadCount", unread);
             return chat;

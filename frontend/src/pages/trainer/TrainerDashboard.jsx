@@ -4,7 +4,7 @@ import axios from "axios";
 import Swal from "sweetalert2";
 import api from "../../api/api";
 
-const API = "http://localhost:8080/api";
+const API        = "http://localhost:8080/api";
 const TEAL       = "#14b8a6";
 const TEAL_DARK  = "#0d9488";
 const TEAL_LIGHT = "#f0fdfa";
@@ -30,8 +30,7 @@ export default function TrainerDashboard() {
   const [recentPayments, setRecentPayments] = useState([]);
   const [expiringClients, setExpiringClients] = useState([]);
 
-  useEffect(() => { loadAll(); }, []);
-
+  // ✅ Moved above useEffect
   const loadAll = async () => {
     try {
       const res = await api.get("/api/profile/trainer");
@@ -60,7 +59,6 @@ export default function TrainerDashboard() {
           const clients = clientRes.data;
           setClientList(clients);
           setStats(p => ({ ...p, totalClients: clients.length }));
-
           const now = new Date();
           setRecentPayments(clients.filter(c => {
             if (!c.startDate) return false;
@@ -84,6 +82,8 @@ export default function TrainerDashboard() {
 
     setLoading(false);
   };
+
+  useEffect(() => { loadAll(); }, []);
 
   const sendReminder = async (clientName, clientId) => {
     Swal.fire({
@@ -155,64 +155,38 @@ export default function TrainerDashboard() {
   return (
     <div className="min-h-screen" style={{ background: "#f0fdf4" }}>
 
-      {/* ── HERO ── */}
-      <div
-        className="relative text-white px-8 py-12 overflow-hidden"
+      {/* HERO */}
+      <div className="relative text-white px-8 py-12 overflow-hidden"
         style={{
           backgroundImage: `linear-gradient(135deg, rgba(10,35,66,0.92) 0%, rgba(10,35,66,0.65) 50%, rgba(20,184,166,0.80) 100%), url('https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=1400&q=80')`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          minHeight: "200px",
+          backgroundSize: "cover", backgroundPosition: "center", minHeight: "200px",
         }}>
-
         <div className="absolute right-10 -top-6 w-56 h-56 bg-white/10 rounded-full pointer-events-none" />
         <div className="absolute right-40 top-16 w-32 h-32 bg-white/10 rounded-full pointer-events-none" />
-
         <div className="relative z-10 max-w-6xl mx-auto">
           <div className="flex items-start justify-between gap-6 flex-wrap">
-
-            {/* LEFT — greeting only */}
             <div>
-              <p className="text-teal-200 text-xs font-semibold uppercase tracking-widest mb-1">
-                Trainer Dashboard
-              </p>
-              <h1 className="text-4xl font-black tracking-tight">
-                Welcome, {profile.name} 👋
-              </h1>
+              <p className="text-teal-200 text-xs font-semibold uppercase tracking-widest mb-1">Trainer Dashboard</p>
+              <h1 className="text-4xl font-black tracking-tight">Welcome, {profile.name} 👋</h1>
               <p className="text-teal-100 mt-1 text-sm">
                 {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
               </p>
               <div className="flex items-center gap-3 mt-3 flex-wrap">
                 {profile.isVerified ? (
-                  <span className="px-3 py-1 rounded-full text-xs font-bold"
-                    style={{ background: "rgba(20,184,166,0.3)", color: "#99f6e4" }}>
-                    ✓ Verified Trainer
-                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold" style={{ background: "rgba(20,184,166,0.3)", color: "#99f6e4" }}>✓ Verified Trainer</span>
                 ) : profile.rejectionReason ? (
-                  <span className="px-3 py-1 rounded-full text-xs font-bold"
-                    style={{ background: "rgba(239,68,68,0.3)", color: "#fca5a5" }}>
-                    ❌ Application Rejected
-                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold" style={{ background: "rgba(239,68,68,0.3)", color: "#fca5a5" }}>❌ Application Rejected</span>
                 ) : (
-                  <span className="px-3 py-1 rounded-full text-xs font-bold"
-                    style={{ background: "rgba(245,158,11,0.3)", color: "#fde68a" }}>
-                    ⏳ Pending Verification
-                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold" style={{ background: "rgba(245,158,11,0.3)", color: "#fde68a" }}>⏳ Pending Verification</span>
                 )}
-                {profile.specialization && (
-                  <span className="text-teal-200 text-xs">• {profile.specialization}</span>
-                )}
+                {profile.specialization && <span className="text-teal-200 text-xs">• {profile.specialization}</span>}
               </div>
             </div>
-
-            {/* RIGHT — monthly earnings pill only (not duplicating stat cards) */}
             {profile.isVerified && (
               <div className="hidden md:flex flex-col items-end gap-2">
                 <div className="bg-white/15 backdrop-blur-sm px-5 py-3 rounded-2xl border border-white/20 text-center">
                   <p className="text-xs text-teal-200 mb-1">Monthly Earnings</p>
-                  <p className="text-3xl font-black text-white">
-                    LKR {monthlyEarnings.toLocaleString()}
-                  </p>
+                  <p className="text-3xl font-black text-white">LKR {monthlyEarnings.toLocaleString()}</p>
                   <p className="text-xs text-teal-200 mt-1">{stats.totalClients} active client{stats.totalClients !== 1 ? "s" : ""}</p>
                 </div>
               </div>
@@ -220,31 +194,19 @@ export default function TrainerDashboard() {
           </div>
         </div>
       </div>
-      {/* ── END HERO ── */}
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
 
-        {/* ── STATE 1: REJECTED ── */}
         {!profile.isVerified && profile.rejectionReason && (
           <div className="bg-white rounded-2xl shadow-sm border-l-4 p-6" style={{ borderColor: "#ef4444" }}>
             <div className="flex items-start gap-3">
               <span className="text-3xl">❌</span>
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-red-600 mb-1">Application Rejected</h3>
-                <p className="text-sm text-gray-500 mb-3">Your trainer application was reviewed and rejected. Please read the reason below, update your profile and resubmit.</p>
+                <p className="text-sm text-gray-500 mb-3">Your trainer application was reviewed and rejected.</p>
                 <div className="p-4 rounded-xl mb-4" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
                   <p className="text-xs font-semibold text-red-400 uppercase tracking-wide mb-1">Reason from admin</p>
                   <p className="text-sm text-red-700 font-medium">"{profile.rejectionReason}"</p>
-                </div>
-                <div className="p-4 rounded-xl mb-4" style={{ background: TEAL_LIGHT }}>
-                  <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: TEAL_DARK }}>What to do next</p>
-                  <ol className="text-sm space-y-1" style={{ color: TEAL_DARK }}>
-                    <li>1. Go to your Profile page</li>
-                    <li>2. Fix the issues mentioned above</li>
-                    <li>3. Make sure all fields are filled</li>
-                    <li>4. Add a clear profile photo</li>
-                    <li>5. Save — admin will review again</li>
-                  </ol>
                 </div>
                 <button onClick={() => navigate("/trainer/profile")}
                   className="px-6 py-2.5 rounded-xl text-white text-sm font-semibold"
@@ -256,7 +218,6 @@ export default function TrainerDashboard() {
           </div>
         )}
 
-        {/* ── STATE 2: PROFILE INCOMPLETE ── */}
         {!profile.isVerified && !profile.rejectionReason && completeness < 100 && (
           <div className="bg-white rounded-2xl shadow-sm border-l-4 p-5" style={{ borderColor: "#f59e0b" }}>
             <div className="flex flex-col sm:flex-row sm:items-start gap-4">
@@ -265,14 +226,10 @@ export default function TrainerDashboard() {
                   <span className="text-2xl">📋</span>
                   <h3 className="font-bold text-gray-800">Complete your profile to get approved</h3>
                 </div>
-                <p className="text-sm text-gray-500 mb-3">Admin will review your profile details before approving your account.</p>
                 {missing.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-3">
                     {missing.map(m => (
-                      <span key={m} className="text-xs px-2 py-1 rounded-full font-medium"
-                        style={{ background: "#fef3c7", color: "#92400e" }}>
-                        ⚠ {m}
-                      </span>
+                      <span key={m} className="text-xs px-2 py-1 rounded-full font-medium" style={{ background: "#fef3c7", color: "#92400e" }}>⚠ {m}</span>
                     ))}
                   </div>
                 )}
@@ -281,9 +238,7 @@ export default function TrainerDashboard() {
                     <div className="h-full rounded-full transition-all duration-500"
                       style={{ width: `${completeness}%`, background: completeness >= 80 ? TEAL : "#f59e0b" }} />
                   </div>
-                  <span className="text-sm font-bold" style={{ color: completeness >= 80 ? TEAL : "#f59e0b" }}>
-                    {completeness}%
-                  </span>
+                  <span className="text-sm font-bold" style={{ color: completeness >= 80 ? TEAL : "#f59e0b" }}>{completeness}%</span>
                 </div>
               </div>
               <button onClick={() => navigate("/trainer/profile")}
@@ -295,37 +250,25 @@ export default function TrainerDashboard() {
           </div>
         )}
 
-        {/* ── STATE 3: WAITING FOR APPROVAL ── */}
         {!profile.isVerified && !profile.rejectionReason && completeness === 100 && (
           <div className="bg-white rounded-2xl shadow-sm p-10 text-center">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center text-4xl mx-auto mb-4"
-              style={{ background: TEAL_LIGHT }}>⏳</div>
+            <div className="w-20 h-20 rounded-full flex items-center justify-center text-4xl mx-auto mb-4" style={{ background: TEAL_LIGHT }}>⏳</div>
             <h3 className="text-xl font-bold text-gray-700 mb-2">Profile Submitted — Awaiting Admin Approval</h3>
-            <p className="text-gray-400 text-sm max-w-md mx-auto mb-4">
-              Your profile is 100% complete and submitted for review. You will be notified once approved!
-            </p>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: TEAL_LIGHT }}>
-              <span className="text-sm font-medium" style={{ color: TEAL_DARK }}>✓ Profile complete — pending admin review</span>
-            </div>
+            <p className="text-gray-400 text-sm max-w-md mx-auto">Your profile is 100% complete and submitted for review.</p>
           </div>
         )}
 
-        {/* ── VERIFIED DASHBOARD ── */}
         {profile.isVerified && (
           <>
-            {/* STAT CARDS — 4 cards, no duplicate from hero */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: "Active Clients",   value: stats.totalClients,    icon: "👥", color: TEAL      },
+                { label: "Active Clients",   value: stats.totalClients,    icon: "👥", color: TEAL },
                 { label: "Pending Requests", value: stats.pendingRequests, icon: "📩", color: stats.pendingRequests > 0 ? "#f59e0b" : TEAL },
                 { label: "Unread Messages",  value: unreadCount,           icon: "💬", color: unreadCount > 0 ? "#ef4444" : TEAL },
-                { label: "Price / Month",    value: profile.pricePerMonth  ? `LKR ${Number(profile.pricePerMonth).toLocaleString()}` : "Not set", icon: "💰", color: "#8b5cf6" },
+                { label: "Price / Month",    value: profile.pricePerMonth ? `LKR ${Number(profile.pricePerMonth).toLocaleString()}` : "Not set", icon: "💰", color: "#8b5cf6" },
               ].map(({ label, value, icon, color }) => (
                 <div key={label} className="bg-white rounded-2xl shadow-sm p-5 flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
-                    style={{ background: `${color}20` }}>
-                    {icon}
-                  </div>
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" style={{ background: `${color}20` }}>{icon}</div>
                   <div>
                     <p className="text-xs text-gray-500">{label}</p>
                     <p className="font-bold text-gray-800 text-xl">{value}</p>
@@ -334,7 +277,6 @@ export default function TrainerDashboard() {
               ))}
             </div>
 
-            {/* PAYMENT RECEIVED BANNER */}
             {recentPayments.length > 0 && (
               <div className="bg-white rounded-2xl shadow-sm border-l-4 p-5" style={{ borderColor: TEAL }}>
                 <div className="flex items-start justify-between gap-4">
@@ -346,43 +288,38 @@ export default function TrainerDashboard() {
                         {recentPayments.map(c => (
                           <p key={c.id} className="text-sm text-gray-500">
                             ✅ <strong>{c.clientName}</strong> paid{" "}
-                            <span className="font-semibold" style={{ color: TEAL }}>
-                              LKR {c.trainerPrice ? Number(c.trainerPrice).toLocaleString() : ""}
-                            </span>
+                            <span className="font-semibold" style={{ color: TEAL }}>LKR {c.trainerPrice ? Number(c.trainerPrice).toLocaleString() : ""}</span>
                             {" "}— active until {c.endDate}
                           </p>
                         ))}
                       </div>
                     </div>
                   </div>
-                  <button onClick={() => navigate("/trainer/notifications")}
-                    className="px-4 py-2 rounded-xl text-white text-xs font-semibold flex-shrink-0"
-                    style={{ background: TEAL }}>
-                    View All →
-                  </button>
                 </div>
               </div>
             )}
 
-            {/* EXPIRING SOON BANNER */}
             {expiringClients.length > 0 && (
               <div className="bg-white rounded-2xl shadow-sm border-l-4 p-5" style={{ borderColor: "#f59e0b" }}>
                 <div className="flex items-start gap-3">
                   <span className="text-2xl">⚠️</span>
                   <div className="flex-1">
                     <p className="font-bold text-gray-800 mb-1">Subscriptions expiring soon</p>
-                    <p className="text-sm text-gray-500 mb-3">Send a reminder to these clients to renew:</p>
                     <div className="space-y-2">
                       {expiringClients.map(c => {
                         const days = getDaysUntilExpiry(c.endDate);
                         return (
-                          <div key={c.id} className="flex items-center justify-between p-3 rounded-xl"
-                            style={{ background: "#fef3c7" }}>
+                          <div key={c.id} className="flex items-center justify-between p-3 rounded-xl" style={{ background: "#fef3c7" }}>
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full text-white font-bold flex items-center justify-center text-sm"
-                                style={{ background: "#f59e0b" }}>
-                                {c.clientName?.charAt(0)}
-                              </div>
+                              {/* ✅ Client photo */}
+                              {c.clientProfileImage ? (
+                                <img src={c.clientProfileImage} alt={c.clientName}
+                                  className="w-8 h-8 rounded-full object-cover border" style={{ borderColor: "#f59e0b" }} />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full text-white font-bold flex items-center justify-center text-sm" style={{ background: "#f59e0b" }}>
+                                  {c.clientName?.charAt(0)}
+                                </div>
+                              )}
                               <div>
                                 <p className="text-sm font-semibold text-gray-800">{c.clientName}</p>
                                 <p className="text-xs text-orange-600 font-medium">
@@ -391,8 +328,7 @@ export default function TrainerDashboard() {
                               </div>
                             </div>
                             <button onClick={() => sendReminder(c.clientName, c.clientId)}
-                              className="px-3 py-1.5 rounded-lg text-white text-xs font-semibold"
-                              style={{ background: "#f59e0b" }}>
+                              className="px-3 py-1.5 rounded-lg text-white text-xs font-semibold" style={{ background: "#f59e0b" }}>
                               Send Reminder
                             </button>
                           </div>
@@ -404,10 +340,7 @@ export default function TrainerDashboard() {
               </div>
             )}
 
-            {/* MAIN GRID */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-              {/* LEFT 2 COLS */}
               <div className="lg:col-span-2 space-y-6">
 
                 {/* PENDING REQUESTS */}
@@ -416,17 +349,10 @@ export default function TrainerDashboard() {
                     <h3 className="font-bold text-gray-800 text-lg">
                       Pending Requests
                       {stats.pendingRequests > 0 && (
-                        <span className="ml-2 px-2 py-0.5 rounded-full text-xs text-white"
-                          style={{ background: "#f59e0b" }}>
-                          {stats.pendingRequests}
-                        </span>
+                        <span className="ml-2 px-2 py-0.5 rounded-full text-xs text-white" style={{ background: "#f59e0b" }}>{stats.pendingRequests}</span>
                       )}
                     </h3>
-                    <button onClick={() => navigate("/trainer/client-requests")}
-                      className="text-xs px-3 py-1.5 rounded-lg text-white"
-                      style={{ background: TEAL }}>
-                      View All
-                    </button>
+                    <button onClick={() => navigate("/trainer/client-requests")} className="text-xs px-3 py-1.5 rounded-lg text-white" style={{ background: TEAL }}>View All</button>
                   </div>
                   {pendingList.length === 0 ? (
                     <div className="text-center py-8 rounded-xl" style={{ background: TEAL_LIGHT }}>
@@ -439,26 +365,23 @@ export default function TrainerDashboard() {
                         <div key={sub.id} className="flex justify-between items-center px-4 py-3 rounded-xl"
                           style={{ background: "#fef9f0", border: "1px solid #fde68a" }}>
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full text-white font-bold flex items-center justify-center"
-                              style={{ background: "#f59e0b" }}>
-                              {sub.clientName?.charAt(0)}
-                            </div>
+                            {/* ✅ Client photo in pending requests */}
+                            {sub.clientProfileImage ? (
+                              <img src={sub.clientProfileImage} alt={sub.clientName}
+                                className="w-9 h-9 rounded-full object-cover border" style={{ borderColor: "#f59e0b" }} />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full text-white font-bold flex items-center justify-center" style={{ background: "#f59e0b" }}>
+                                {sub.clientName?.charAt(0)}
+                              </div>
+                            )}
                             <div>
                               <p className="font-semibold text-gray-800 text-sm">{sub.clientName}</p>
                               <p className="text-xs text-gray-400">{sub.startDate}</p>
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            <button onClick={() => handleAccept(sub.id)}
-                              className="px-3 py-1.5 rounded-lg text-xs text-white font-semibold"
-                              style={{ background: TEAL }}>
-                              Accept
-                            </button>
-                            <button onClick={() => handleReject(sub.id)}
-                              className="px-3 py-1.5 rounded-lg text-xs text-white font-semibold"
-                              style={{ background: "#ef4444" }}>
-                              Reject
-                            </button>
+                            <button onClick={() => handleAccept(sub.id)} className="px-3 py-1.5 rounded-lg text-xs text-white font-semibold" style={{ background: TEAL }}>Accept</button>
+                            <button onClick={() => handleReject(sub.id)} className="px-3 py-1.5 rounded-lg text-xs text-white font-semibold" style={{ background: "#ef4444" }}>Reject</button>
                           </div>
                         </div>
                       ))}
@@ -470,11 +393,7 @@ export default function TrainerDashboard() {
                 <div className="bg-white rounded-2xl shadow-sm p-6">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="font-bold text-gray-800 text-lg">Active Clients</h3>
-                    <button onClick={() => navigate("/trainer/my-clients")}
-                      className="text-xs px-3 py-1.5 rounded-lg text-white"
-                      style={{ background: TEAL }}>
-                      View All
-                    </button>
+                    <button onClick={() => navigate("/trainer/my-clients")} className="text-xs px-3 py-1.5 rounded-lg text-white" style={{ background: TEAL }}>View All</button>
                   </div>
                   {clientList.length === 0 ? (
                     <div className="text-center py-8 rounded-xl" style={{ background: TEAL_LIGHT }}>
@@ -491,10 +410,15 @@ export default function TrainerDashboard() {
                             className="flex items-center gap-3 p-4 rounded-xl border transition hover:shadow-sm cursor-pointer"
                             style={{ borderColor: isExpiring ? "#fde68a" : "#e5e7eb", background: isExpiring ? "#fefce8" : "white" }}
                             onClick={() => navigate(`/trainer/client/${sub.clientId}`)}>
-                            <div className="w-10 h-10 rounded-full text-white font-bold flex items-center justify-center flex-shrink-0"
-                              style={{ background: TEAL }}>
-                              {sub.clientName?.charAt(0)}
-                            </div>
+                            {/* ✅ Client photo in active clients */}
+                            {sub.clientProfileImage ? (
+                              <img src={sub.clientProfileImage} alt={sub.clientName}
+                                className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2" style={{ borderColor: TEAL }} />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full text-white font-bold flex items-center justify-center flex-shrink-0" style={{ background: TEAL }}>
+                                {sub.clientName?.charAt(0)}
+                              </div>
+                            )}
                             <div className="flex-1 min-w-0">
                               <p className="font-semibold text-gray-800 text-sm truncate">{sub.clientName}</p>
                               {isExpiring ? (
@@ -512,31 +436,20 @@ export default function TrainerDashboard() {
                 </div>
               </div>
 
-              {/* RIGHT COL */}
               <div className="space-y-4">
-
-                {/* MESSAGES */}
                 <div className="bg-white rounded-2xl shadow-sm p-5">
                   <div className="flex justify-between items-center mb-3">
                     <h3 className="text-sm font-semibold text-gray-500">Messages</h3>
-                    {unreadCount > 0 && (
-                      <span className="px-2 py-0.5 rounded-full text-xs text-white font-bold"
-                        style={{ background: "#ef4444" }}>
-                        {unreadCount} new
-                      </span>
-                    )}
+                    {unreadCount > 0 && <span className="px-2 py-0.5 rounded-full text-xs text-white font-bold" style={{ background: "#ef4444" }}>{unreadCount} new</span>}
                   </div>
                   <button onClick={() => navigate("/trainer/chat")}
                     className="w-full py-3 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2"
                     style={{ background: TEAL }}>
                     💬 Open Messages
-                    {unreadCount > 0 && (
-                      <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{unreadCount}</span>
-                    )}
+                    {unreadCount > 0 && <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{unreadCount}</span>}
                   </button>
                 </div>
 
-                {/* QUICK ACTIONS */}
                 <div className="bg-white rounded-2xl shadow-sm p-5">
                   <h3 className="text-sm font-semibold text-gray-500 mb-3">Quick Actions</h3>
                   <div className="space-y-2">
@@ -557,22 +470,13 @@ export default function TrainerDashboard() {
                   </div>
                 </div>
 
-                {/* PROFILE COMPLETENESS */}
                 <div className="bg-white rounded-2xl shadow-sm p-5">
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="text-sm font-semibold text-gray-500">Profile</h3>
-                    <span className="text-sm font-bold"
-                      style={{ color: completeness === 100 ? TEAL : "#f59e0b" }}>
-                      {completeness}%
-                    </span>
+                    <span className="text-sm font-bold" style={{ color: completeness === 100 ? TEAL : "#f59e0b" }}>{completeness}%</span>
                   </div>
                   <div className="h-2 rounded-full bg-gray-100 overflow-hidden mb-2">
-                    <div className="h-full rounded-full transition-all"
-                      style={{ width: `${completeness}%`, background: completeness === 100 ? TEAL : "#f59e0b" }} />
-                  </div>
-                  <div className="flex justify-between text-xs text-gray-400">
-                    <span>{profile.specialization || "No specialization"}</span>
-                    <span>{profile.pricePerMonth ? `LKR ${Number(profile.pricePerMonth).toLocaleString()}` : "No price"}</span>
+                    <div className="h-full rounded-full transition-all" style={{ width: `${completeness}%`, background: completeness === 100 ? TEAL : "#f59e0b" }} />
                   </div>
                 </div>
               </div>

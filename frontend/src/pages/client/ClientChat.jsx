@@ -189,11 +189,20 @@ export default function ClientChat() {
         <div className="relative z-10 max-w-4xl mx-auto">
           <div className="flex items-center justify-between gap-6 flex-wrap">
 
-            {/* LEFT — trainer info */}
+            {/* LEFT — trainer info with photo */}
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-white/20 text-white font-black text-2xl flex items-center justify-center border-4 border-white/30 flex-shrink-0">
-                {trainerInfo?.userName?.charAt(0).toUpperCase()}
-              </div>
+              {/* ✅ FIXED: shows trainer photo in hero */}
+              {trainerInfo?.profileImage ? (
+                <img
+                  src={trainerInfo.profileImage}
+                  alt={trainerInfo.userName}
+                  className="w-16 h-16 rounded-full object-cover flex-shrink-0 border-4 border-white/30"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-white/20 text-white font-black text-2xl flex items-center justify-center border-4 border-white/30 flex-shrink-0">
+                  {trainerInfo?.userName?.charAt(0).toUpperCase()}
+                </div>
+              )}
               <div>
                 <p className="text-blue-200 text-xs font-semibold uppercase tracking-widest mb-0.5">Your Trainer</p>
                 <h1 className="text-3xl font-black tracking-tight">{trainerInfo?.userName}</h1>
@@ -203,7 +212,7 @@ export default function ClientChat() {
               </div>
             </div>
 
-            {/* RIGHT — connection status pill */}
+            {/* RIGHT — connection status */}
             <div className="bg-white/15 backdrop-blur-sm px-5 py-3 rounded-2xl border border-white/20 text-center">
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full flex-shrink-0"
@@ -217,7 +226,6 @@ export default function ClientChat() {
           </div>
         </div>
       </div>
-      {/* ── END HERO ── */}
 
       {/* CHAT AREA */}
       <div className="max-w-4xl mx-auto px-4 py-5">
@@ -225,12 +233,10 @@ export default function ClientChat() {
           style={{ height: "calc(100vh - 300px)", minHeight: "450px" }}>
 
           {/* MESSAGES */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-1"
-            style={{ background: "#f8fafc" }}>
+          <div className="flex-1 overflow-y-auto p-5 space-y-1" style={{ background: "#f8fafc" }}>
 
             {Object.entries(groupedMessages).map(([date, msgs]) => (
               <div key={date}>
-                {/* DATE DIVIDER */}
                 <div className="flex items-center gap-3 my-5">
                   <div className="flex-1 h-px bg-gray-200" />
                   <span className="text-xs text-gray-400 px-3 py-1 bg-white rounded-full border border-gray-100 font-medium">
@@ -245,12 +251,21 @@ export default function ClientChat() {
                     <div key={msg.id || i}
                       className={`flex mb-3 ${isMe ? "justify-end" : "justify-start"}`}>
 
-                      {/* TRAINER AVATAR */}
+                      {/* ✅ FIXED: trainer avatar in messages shows photo */}
                       {!isMe && (
-                        <div className="w-8 h-8 rounded-full text-white text-xs font-bold flex items-center justify-center mr-2 flex-shrink-0 self-end"
-                          style={{ background: BLUE }}>
-                          {msg.sender.name?.charAt(0).toUpperCase()}
-                        </div>
+                        trainerInfo?.profileImage ? (
+                          <img
+                            src={trainerInfo.profileImage}
+                            alt={msg.sender.name}
+                            className="w-8 h-8 rounded-full object-cover mr-2 flex-shrink-0 self-end border"
+                            style={{ borderColor: BLUE }}
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full text-white text-xs font-bold flex items-center justify-center mr-2 flex-shrink-0 self-end"
+                            style={{ background: BLUE }}>
+                            {msg.sender.name?.charAt(0).toUpperCase()}
+                          </div>
+                        )
                       )}
 
                       <div className="max-w-[65%]">

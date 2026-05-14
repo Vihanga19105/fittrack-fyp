@@ -4,6 +4,7 @@ import java.util.Map;
 import com.fittrack.backend.dto.SubscriptionDTO;
 import com.fittrack.backend.model.Subscription;
 import com.fittrack.backend.model.User;
+import com.fittrack.backend.repository.ClientProfileRepository;
 import com.fittrack.backend.repository.SubscriptionRepository;
 import com.fittrack.backend.repository.TrainerProfileRepository;
 import com.fittrack.backend.repository.UserRepository;
@@ -26,6 +27,7 @@ public class SubscriptionController {
     private final SubscriptionRepository subscriptionRepository;
     private final UserRepository userRepository;
     private final TrainerProfileRepository trainerProfileRepository;
+    private final ClientProfileRepository clientProfileRepository;
     private final EmailService emailService;
     private final NotificationService notificationService;
 
@@ -33,11 +35,13 @@ public class SubscriptionController {
             SubscriptionRepository subscriptionRepository,
             UserRepository userRepository,
             TrainerProfileRepository trainerProfileRepository,
+            ClientProfileRepository clientProfileRepository,
             EmailService emailService,
             NotificationService notificationService) {
         this.subscriptionRepository = subscriptionRepository;
         this.userRepository = userRepository;
         this.trainerProfileRepository = trainerProfileRepository;
+        this.clientProfileRepository = clientProfileRepository;
         this.emailService = emailService;
         this.notificationService = notificationService;
     }
@@ -83,8 +87,7 @@ public class SubscriptionController {
         subscriptionRepository.save(subscription);
 
         // ── NOTIFICATION: trainer gets notified of new request ──
-        notificationService.subscriptionRequest(
-                trainer, client.getName());
+        notificationService.subscriptionRequest(trainer, client.getName());
 
         return ResponseEntity.ok("Subscription request sent successfully!");
     }
@@ -290,26 +293,41 @@ public class SubscriptionController {
         return ResponseEntity.ok(dtos);
     }
 
+    // ── BUILD DTO ──
     private SubscriptionDTO buildDTO(Subscription sub) {
         SubscriptionDTO dto = new SubscriptionDTO();
         dto.setId(sub.getId());
+
+        // Client info
         dto.setClientId(sub.getClient().getId());
         dto.setClientName(sub.getClient().getName());
         dto.setClientEmail(sub.getClient().getEmail());
+
+        // ✅ Client profile image
+        clientProfileRepository.findByUser(sub.getClient()).ifPresent(cp ->
+            dto.setClientProfileImage(cp.getProfileImage())
+        );
+
+        // Trainer info
         dto.setTrainerId(sub.getTrainer().getId());
         dto.setTrainerName(sub.getTrainer().getName());
         dto.setTrainerEmail(sub.getTrainer().getEmail());
+
+        // ✅ Trainer profile info including image
         trainerProfileRepository.findByUser(sub.getTrainer()).ifPresent(tp -> {
-    dto.setTrainerSpecialization(tp.getSpecialization());
-    dto.setTrainerPrice(tp.getPricePerMonth());
-    dto.setTrainerProfileImage(tp.getProfileImage());
-});
+            dto.setTrainerSpecialization(tp.getSpecialization());
+            dto.setTrainerPrice(tp.getPricePerMonth());
+            dto.setTrainerProfileImage(tp.getProfileImage());
+        });
+
+        // Subscription info
         dto.setStatus(sub.getStatus());
         dto.setStartDate(sub.getStartDate() != null
                 ? sub.getStartDate().toString() : null);
         dto.setEndDate(sub.getEndDate() != null
                 ? sub.getEndDate().toString() : null);
         dto.setRejectionReason(sub.getRejectionReason());
+
         return dto;
     }
 }
