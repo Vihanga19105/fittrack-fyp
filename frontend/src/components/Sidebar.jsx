@@ -8,30 +8,85 @@ import {
 } from "lucide-react";
 import Swal from "sweetalert2";
 import NotificationBell from "./NotificationBell";
+import api from "../api/api";
 
-const API = "http://localhost:8080/api";
+const API  = "http://localhost:8080/api";
 const NAVY = "#0A2342";
 const BLUE = "#29ABE2";
 
 export default function ClientSidebar() {
-  const navigate = useNavigate();
-  const token = localStorage.getItem("token");
-  const [unreadCount, setUnreadCount] = useState(0);
+  const navigate  = useNavigate();
+  const token     = localStorage.getItem("token");
+  const clientId  = localStorage.getItem("userId");
+
+  const [unreadCount,      setUnreadCount]      = useState(0);
+  const [newWorkout,       setNewWorkout]        = useState(false);
+  const [newMeal,          setNewMeal]           = useState(false);
 
   useEffect(() => {
     fetchUnread();
-    const interval = setInterval(fetchUnread, 10000);
+    checkNewPlans();
+    const interval = setInterval(() => {
+      fetchUnread();
+      checkNewPlans();
+    }, 15000);
     return () => clearInterval(interval);
   }, []);
 
   const fetchUnread = async () => {
     try {
-      const res = await axios.get(
-        `${API}/chat/unread-count`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await axios.get(`${API}/chat/unread-count`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setUnreadCount(res.data.unreadCount || 0);
     } catch {}
+  };
+
+  // ✅ Check if trainer assigned new workout or meal plan
+  // Uses localStorage timestamps to track when client last visited each page
+  const checkNewPlans = async () => {
+    const lastVisitedWorkout = localStorage.getItem("lastVisitedWorkout");
+    const lastVisitedMeal    = localStorage.getItem("lastVisitedMeal");
+
+    try {
+      const res = await api.get("/api/workout/my");
+      const plans = res.data || [];
+      if (plans.length > 0) {
+        const latestPlan = plans[plans.length - 1];
+        const planUpdated = latestPlan.updatedAt || latestPlan.createdAt;
+        if (planUpdated && lastVisitedWorkout) {
+          setNewWorkout(new Date(planUpdated) > new Date(lastVisitedWorkout));
+        } else if (planUpdated && !lastVisitedWorkout) {
+          setNewWorkout(true);
+        }
+      }
+    } catch {}
+
+    try {
+      const res = await axios.get(`${API}/meal-plans/my-plan/${clientId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.data.message) {
+        const planUpdated = res.data.updatedAt || res.data.createdAt;
+        if (planUpdated && lastVisitedMeal) {
+          setNewMeal(new Date(planUpdated) > new Date(lastVisitedMeal));
+        } else if (planUpdated && !lastVisitedMeal) {
+          setNewMeal(true);
+        }
+      }
+    } catch {}
+  };
+
+  // ✅ Mark workout as seen when client clicks the link
+  const handleWorkoutClick = () => {
+    localStorage.setItem("lastVisitedWorkout", new Date().toISOString());
+    setNewWorkout(false);
+  };
+
+  // ✅ Mark meal plan as seen when client clicks the link
+  const handleMealClick = () => {
+    localStorage.setItem("lastVisitedMeal", new Date().toISOString());
+    setNewMeal(false);
   };
 
   const handleLogout = () => {
@@ -66,47 +121,77 @@ export default function ClientSidebar() {
           </div>
           <div>
             <p className="text-lg font-black tracking-wide">FitTrack</p>
-            <p className="text-xs"
-              style={{ color: "rgba(255,255,255,0.45)" }}>
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
               Client Portal
             </p>
           </div>
         </div>
-        {/* NOTIFICATION BELL */}
         <NotificationBell />
       </div>
 
       {/* MENU */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        <Item to="/client/dashboard"
-          icon={<LayoutDashboard size={18}/>}
-          text="Dashboard"/>
-        <Item to="/client/profile"
-          icon={<User size={18}/>}
-          text="Profile"/>
-        
-        <Item to="/client/workout-plan"
-          icon={<Dumbbell size={18}/>}
-          text="Workout Plan"/>
-        <Item to="/client/nutrition"
-          icon={<Apple size={18}/>}
-          text="Nutrition Plan"/>
-        <Item to="/client/bmi"
-          icon={<Scale size={18}/>}
-          text="BMI Calculator"/>
-        <Item to="/client/progress"
-          icon={<Activity size={18}/>}
-          text="Progress"/>
+
+        <Item to="/client/dashboard" icon={<LayoutDashboard size={18}/>} text="Dashboard" />
+        <Item to="/client/profile"   icon={<User size={18}/>}            text="Profile"   />
+
+        {/* ✅ WORKOUT PLAN — with new plan badge */}
+        <NavLink to="/client/workout-plan"
+          onClick={handleWorkoutClick}
+          className="flex items-center justify-between px-4 py-2.5 rounded-xl cursor-pointer transition-all text-sm font-medium"
+          style={({ isActive }) => ({
+            background: isActive ? BLUE : "transparent",
+            color:      isActive ? "white" : "rgba(255,255,255,0.65)",
+          })}>
+          {({ isActive }) => (
+            <>
+              <div className="flex items-center gap-3">
+                <Dumbbell size={18}/>
+                <span>Workout Plan</span>
+              </div>
+              {newWorkout && (
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
+                  style={{ background: "#10b981" }}>
+                  New
+                </span>
+              )}
+            </>
+          )}
+        </NavLink>
+
+        {/* ✅ NUTRITION PLAN — with new plan badge */}
+        <NavLink to="/client/nutrition"
+          onClick={handleMealClick}
+          className="flex items-center justify-between px-4 py-2.5 rounded-xl cursor-pointer transition-all text-sm font-medium"
+          style={({ isActive }) => ({
+            background: isActive ? BLUE : "transparent",
+            color:      isActive ? "white" : "rgba(255,255,255,0.65)",
+          })}>
+          {({ isActive }) => (
+            <>
+              <div className="flex items-center gap-3">
+                <Apple size={18}/>
+                <span>Nutrition Plan</span>
+              </div>
+              {newMeal && (
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
+                  style={{ background: "#10b981" }}>
+                  New
+                </span>
+              )}
+            </>
+          )}
+        </NavLink>
+
+        <Item to="/client/bmi"      icon={<Scale size={18}/>}    text="BMI Calculator" />
+        <Item to="/client/progress" icon={<Activity size={18}/>} text="Progress"       />
 
         {/* CHAT WITH UNREAD BADGE */}
         <NavLink to="/client/chat"
-          className={({ isActive }) =>
-            `flex items-center justify-between px-4 py-2.5
-             rounded-xl cursor-pointer transition-all text-sm font-medium`
-          }
+          className="flex items-center justify-between px-4 py-2.5 rounded-xl cursor-pointer transition-all text-sm font-medium"
           style={({ isActive }) => ({
             background: isActive ? BLUE : "transparent",
-            color: isActive ? "white" : "rgba(255,255,255,0.65)",
+            color:      isActive ? "white" : "rgba(255,255,255,0.65)",
           })}>
           {({ isActive }) => (
             <>
@@ -124,12 +209,8 @@ export default function ClientSidebar() {
           )}
         </NavLink>
 
-        <Item to="/client/payments"
-          icon={<CreditCard size={18}/>}
-          text="Payments"/>
-        <Item to="/client/settings"
-          icon={<Settings size={18}/>}
-          text="Settings"/>
+        <Item to="/client/payments" icon={<CreditCard size={18}/>} text="Payments" />
+        <Item to="/client/settings" icon={<Settings size={18}/>}   text="Settings" />
       </nav>
 
       {/* LOGOUT */}
@@ -138,14 +219,8 @@ export default function ClientSidebar() {
         <button onClick={handleLogout}
           className="flex items-center gap-3 px-4 py-2.5 rounded-xl w-full transition-all text-sm font-medium"
           style={{ color: "rgba(255,255,255,0.55)" }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(239,68,68,0.15)";
-            e.currentTarget.style.color = "#fca5a5";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.color = "rgba(255,255,255,0.55)";
-          }}>
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.15)"; e.currentTarget.style.color = "#fca5a5"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(255,255,255,0.55)"; }}>
           <LogOut size={18}/>
           <span>Logout</span>
         </button>
@@ -160,7 +235,7 @@ function Item({ to, icon, text }) {
       className="flex items-center gap-3 px-4 py-2.5 rounded-xl cursor-pointer transition-all text-sm font-medium"
       style={({ isActive }) => ({
         background: isActive ? BLUE : "transparent",
-        color: isActive ? "white" : "rgba(255,255,255,0.65)",
+        color:      isActive ? "white" : "rgba(255,255,255,0.65)",
       })}>
       {icon}
       <span>{text}</span>

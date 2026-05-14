@@ -300,9 +300,27 @@ export default function ClientProgress() {
             {activeTab === "bmi" && (
               <>
                 <h3 className="font-bold text-gray-800 mb-4">BMI History</h3>
-                {bmiChartData.length < 2 ? (
-                  <div className="text-center py-16 rounded-xl" style={{ background: BLUE_LIGHT }}><p className="text-4xl mb-3">💪</p><p className="font-semibold" style={{ color: BLUE_DARK }}>Log more BMI readings to see chart</p></div>
-                ) : (
+                {bmiChartData.length === 0 ? (
+  <div className="text-center py-16 rounded-xl" style={{ background: BLUE_LIGHT }}>
+    <p className="text-4xl mb-3">💪</p>
+    <p className="font-semibold" style={{ color: BLUE_DARK }}>No BMI readings yet</p>
+  </div>
+) : bmiChartData.length === 1 ? (
+  <div className="p-5 rounded-xl mb-4" style={{ background: BLUE_LIGHT }}>
+    <p className="text-xs text-gray-400 mb-1">Your BMI reading</p>
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-3xl font-black" style={{ color: BLUE }}>{bmiChartData[0].bmi}</p>
+        <p className="text-sm font-semibold mt-1" style={{ color: getBmiColor(bmiChartData[0].bmi) }}>
+          {bmiLogs[0].category}
+        </p>
+        <p className="text-xs text-gray-400 mt-0.5">{bmiChartData[0].date}</p>
+      </div>
+      <div className="text-5xl">💪</div>
+    </div>
+    <p className="text-xs text-gray-400 mt-3">Log another BMI reading to see your progress chart</p>
+  </div>
+) : (
                   <ResponsiveContainer width="100%" height={280}>
                     <LineChart data={bmiChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6"/>

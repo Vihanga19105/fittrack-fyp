@@ -18,39 +18,34 @@ export default function Login() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
+  // ✅ Called on button click — no form submit involved at all
+  const handleLogin = async () => {
     if (!form.email || !form.password) {
-      await Swal.fire({
-        title: "Error",
+      Swal.fire({
+        title: "Missing Fields",
         text: "Email and Password are required",
         icon: "error",
         confirmButtonColor: BLUE,
-        allowOutsideClick: false,
       });
       return;
     }
 
     if (!form.email.includes("@")) {
-      await Swal.fire({
-        title: "Error",
+      Swal.fire({
+        title: "Invalid Email",
         text: "Enter a valid email address",
         icon: "error",
         confirmButtonColor: BLUE,
-        allowOutsideClick: false,
       });
       return;
     }
 
     if (form.password.length < 6) {
-      await Swal.fire({
-        title: "Error",
+      Swal.fire({
+        title: "Invalid Password",
         text: "Password must be at least 6 characters",
         icon: "error",
         confirmButtonColor: BLUE,
-        allowOutsideClick: false,
       });
       return;
     }
@@ -76,16 +71,12 @@ export default function Login() {
         icon: "success",
         timer: 1500,
         showConfirmButton: false,
-        allowOutsideClick: false,
       });
 
-      if (role === "CLIENT") {
-        navigate("/client/dashboard");
-      } else if (role === "TRAINER") {
-        navigate("/trainer/dashboard");
-      } else if (role === "ADMIN") {
-        navigate("/admin/dashboard");
-      }
+      if (role === "CLIENT")       navigate("/client/dashboard");
+      else if (role === "TRAINER") navigate("/trainer/dashboard");
+      else if (role === "ADMIN")   navigate("/admin/dashboard");
+
     } catch (error) {
       let msg = "Invalid email or password. Please try again.";
 
@@ -99,17 +90,20 @@ export default function Login() {
         }
       }
 
-      await Swal.fire({
+      Swal.fire({
         title: "Login Failed",
         text: msg,
         icon: "error",
         confirmButtonColor: BLUE,
-        allowOutsideClick: false,
-        allowEscapeKey: false,
       });
     } finally {
       setLoading(false);
     }
+  };
+
+  // ✅ Allow pressing Enter key to login
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") handleLogin();
   };
 
   return (
@@ -117,14 +111,13 @@ export default function Login() {
       <Navbar />
 
       <div className="min-h-screen flex items-center justify-center bg-[#EEF4FF] px-4 pt-24">
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white p-8 rounded-xl w-full max-w-md shadow-xl"
-        >
+
+        {/* ✅ div instead of form — no browser native submit possible */}
+        <div className="bg-white p-8 rounded-xl w-full max-w-md shadow-xl">
+
           <h2 className="text-4xl text-gray-800 font-bold mb-2 text-center">
             Login
           </h2>
-
           <p className="text-center text-gray-500 text-sm mb-6">
             Welcome back to FitTrack
           </p>
@@ -133,13 +126,14 @@ export default function Login() {
           <label className="text-sm font-medium text-gray-700 mb-1 block">
             Email
           </label>
-
           <input
-            type="email"
+            type="text"
             name="email"
             placeholder="Enter your email"
             value={form.email}
             onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            autoComplete="email"
             className="w-full mb-4 p-3 rounded-lg border border-gray-300 outline-none text-gray-800 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
           />
 
@@ -147,7 +141,6 @@ export default function Login() {
           <label className="text-sm font-medium text-gray-700 mb-1 block">
             Password
           </label>
-
           <div className="relative mb-2">
             <input
               type={showPassword ? "text" : "password"}
@@ -155,9 +148,10 @@ export default function Login() {
               placeholder="Enter your password"
               value={form.password}
               onChange={handleChange}
+              onKeyDown={handleKeyDown}
+              autoComplete="current-password"
               className="w-full p-3 rounded-lg border border-gray-300 outline-none text-gray-800 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 pr-10"
             />
-
             <span
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-3 cursor-pointer text-gray-400 hover:text-gray-600 text-lg"
@@ -175,9 +169,9 @@ export default function Login() {
             Forgot Password?
           </p>
 
-          {/* SUBMIT */}
+          {/* ✅ onClick instead of type="submit" */}
           <button
-            type="submit"
+            onClick={handleLogin}
             disabled={loading}
             className="w-full text-white py-3 rounded-lg font-semibold transition-opacity hover:opacity-90 disabled:opacity-60"
             style={{ background: BLUE }}
@@ -195,7 +189,7 @@ export default function Login() {
               Register
             </span>
           </p>
-        </form>
+        </div>
       </div>
 
       <Footer />

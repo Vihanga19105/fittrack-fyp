@@ -329,12 +329,9 @@ docker-compose down
 
 Use the following demo accounts for testing and demonstration.
 
-| Role    | Email           | Password          |
-|---------|-----------------|-------------------|
-| Admin   | admin@test.com  | add-demo-password |
-| Trainer | trainer@test.com| add-demo-password |
-| Client  | client@test.com | add-demo-password |
-
+Client -- client@fittrack.com (password-client123)
+Trainer -- trainer@fittrack.com(password - trainer123)
+Admin -- admin@fittrack.com(password - admin123)
 
 ## Stripe Sandbox Testing
 

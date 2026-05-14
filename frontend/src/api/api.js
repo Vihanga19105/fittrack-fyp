@@ -14,12 +14,19 @@ api.interceptors.request.use((config) => {
 });
 
 // ✅ If token expired, redirect to login
+// BUT skip redirect if already on login, register, or forgot-password page
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.clear();
-      window.location.href = "/login";
+      const currentPath = window.location.pathname;
+      const authPages = ["/login", "/register", "/forgot-password", "/verify-email"];
+      const isAuthPage = authPages.some(p => currentPath.startsWith(p));
+
+      if (!isAuthPage) {
+        localStorage.clear();
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }
